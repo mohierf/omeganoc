@@ -153,7 +153,8 @@ def init(config):
     import livestatusservice # Livestatus services
     import predictservice # predictation tools
     import reports # logs screens
-
+    import configservice # Shinken configuration web services
+    
     #Starting point
     @app.route('/')
     @login_required
