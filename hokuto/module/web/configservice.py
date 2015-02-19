@@ -25,16 +25,45 @@
 import os
 
 from pynag.Utils import paths
+from pynag.Parsers import config
 
-from flask import jsonify
+from flask import jsonify, render_template
 from flask.ext.login import login_required
+from werkzeug.contrib.cache import SimpleCache
 
-from . import app
+from . import app, cache
+
+def _getconf():
+    conf = cache.get('nag_conf')
+    if conf is None:
+        # No conf in cache; load it
+        conf = config() # Let pynag find out the configuration path by itself
+        conf.parse()
+        cache.set('nag_conf', conf, timeout=60) #TODO : Configure cache timeout
+    return conf
+
+def _readStr(source, attr, default = None):
+    """ Reads a string from a distionnary value and returns it as unicode, making sure we get no encoding errors """
+    if attr in source:
+        return unicode(source[attr], errors='replace')
+    else:
+        return default
+    
+@app.route('/config/list')
+@login_required
+def config_list():
+    return render_template('config/list.html')
 
 @app.route('/config/canwrite')
 @login_required
-def canedit():
+def config_can_edit():
     confpath = paths.find_main_configuration_file()
     result = os.access(confpath, os.W_OK)
     return jsonify({'result':result})
 
+@app.route('/config/hosts')
+@login_required
+def config_get_hosts():
+    conf = _getconf()
+    data = [{'name':_readStr(h, 'host_name'), 'alias':_readStr(h, 'alias')} for h in conf['all_host'] if 'host_name' in h]
+    return jsonify({'result':data})

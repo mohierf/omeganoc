@@ -122,8 +122,16 @@
                 {% endif %}
 
                 {% if current_user.is_super_admin %}
-                <li>
+                <li class="tab-menu">
                     <a href="{{ url_for('list_users') }}">{{ gettext('Manage OmegaNoc') }}</a>
+                    <ul>
+                        <li>
+                            <a href="{{ url_for('list_users') }}">{{ gettext('Users') }}</a>
+                        </li>
+                        <li>
+                            <a href="{{ url_for('config_list') }}">{{ gettext('System configuration') }}</a>
+                        </li>
+                    </ul>
                 </li>
                 {% endif %}
             </ul>
