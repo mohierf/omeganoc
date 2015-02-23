@@ -16,3 +16,25 @@ p.intro {
 #config_main_list > thead {
     background-color: #3A4348;
 }
+
+/* Buttons !
+
+.button {
+    border-radius: 0.5em;
+    color: #FFF;
+    display: inline-block;
+    padding: 3px 10px;
+    background: none;
+    border: none;
+    text-transform: capitalize;
+}
+
+.button.remove {
+    background-color:#d9534f;
+}
+
+.button.create {
+    background-color: #019875;
+}
+
+*/

@@ -358,6 +358,13 @@ define(['jquery', 'onoc.createurl', 'datatables'], function(jQuery, createurl) {
                 { 'title': 'Host name', 'data': 'host_name' },
                 { 'title': 'Address', 'data': 'address' },
                 { 'title': 'File', 'data': 'meta.filename' },
+                { 'title': 'Edit', 
+                  'data': 'host_name',
+                  'render': function(data, type, row, meta) {
+                      return '<a href="' + createurl('/config/host/' + data) + '" class="button">Edit</a>';
+                  },
+                  'orderable': false,
+                  'searchable': false,},
             ],
         });
     });
