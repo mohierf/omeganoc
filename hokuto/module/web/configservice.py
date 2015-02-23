@@ -93,5 +93,5 @@ def config_can_edit():
 def config_get_hosts():
     conf = _getconf()
     #data = [{'name':_readStr(h, 'host_name'), 'alias':_readStr(h, 'alias')} for h in conf['all_host'] if 'host_name' in h]
-    data = _normalizestrings(conf['all_host'])
-    return jsonify({'result':data})
+    data = _normalizestrings([h for h in conf['all_host'] if 'host_name' in h])
+    return jsonify({'data':data})

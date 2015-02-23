@@ -19,17 +19,20 @@
 
 {% block head %}
 <link href="{{ url_for('static', filename='css/jquery.datatables.css') }}" rel="stylesheet" type="text/css" />
+<link href="{{ url_for('static', filename='css/config.css') }}" rel="stylesheet" type="text/css" />
 {% endblock %}
 
 {% block content %}
 <div id="mainContent">
   <h3 class="title"> {{gettext('Configuration elements')}} </h3>
-  <p>This section lists the elements that are present in your monitoring configuration files. You can list, edit, create and remove
+  <p class="intro">This section lists the elements that are present in your monitoring configuration files. You can list, edit, create and remove
   these elements, and the changes you make will be saved into the monitoring system's configuration files.</p>
 
-   <table id="mainList"></table>
+   <table id="config_main_list" cellpadding="0" cellspacing="0" class="display" border="0"></table>
 </div>
 
-<script src="/static/scripts/config_list.js"></script>
+<script type="text/javascript">
+    onoc_main_modules.push('config');
+</script>
 
 {% endblock %}

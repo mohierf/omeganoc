@@ -1,0 +1,18 @@
+#mainContent {
+    position: relative;
+    overflow: auto;
+    max-height: 100%;
+    padding: 2em;
+}
+
+p.intro {
+    margin: 1em 0 2em 0;
+}
+
+#config_main_list {
+    border: 2px solid #555555;
+}
+
+#config_main_list > thead {
+    background-color: #3A4348;
+}
