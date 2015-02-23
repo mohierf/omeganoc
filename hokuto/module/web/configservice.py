@@ -48,6 +48,33 @@ def _readStr(source, attr, default = None):
         return unicode(source[attr], errors='replace')
     else:
         return default
+        
+def _normalizestrings(data):
+    """ 
+    Recursively checks all the strings in the provided dict to make sure they only contain valid utf-8 characters.
+    We do this to avoid errors during serialisation and transmission of the data with JSON.
+    """
+    if isinstance(data, str):
+        # Non unicode strings : turn to unicode, secure invalid chars
+        return unicode(data, errors='replace')
+    elif isinstance(data, unicode):
+        # Already unicode strings : return as-is
+        return value
+    elif isinstance(data, list):
+        # Lists : check each element
+        for val in xrange(0, len(data)):
+            data[val] = _normalizestrings(data[val])
+        return data
+    elif isinstance(data, dict):
+        # Dicts : Check each element
+        for k, v in data.iteritems():
+            data[k] = _normalizestrings(v)
+        return data
+    else:
+        #Everything else : return as-is
+        return data
+            
+            
     
 @app.route('/config/list')
 @login_required
@@ -65,5 +92,6 @@ def config_can_edit():
 @login_required
 def config_get_hosts():
     conf = _getconf()
-    data = [{'name':_readStr(h, 'host_name'), 'alias':_readStr(h, 'alias')} for h in conf['all_host'] if 'host_name' in h]
+    #data = [{'name':_readStr(h, 'host_name'), 'alias':_readStr(h, 'alias')} for h in conf['all_host'] if 'host_name' in h]
+    data = _normalizestrings(conf['all_host'])
     return jsonify({'result':data})
