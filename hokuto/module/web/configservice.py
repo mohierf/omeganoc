@@ -17,10 +17,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-""" Contains web services used to manipulate shinken configuration files """
-
-# Operations :
-# - canedit (optionnal path param) - determines if the shinken main conf (/etc/shinken/shinken.cfg) can be written
+""" Contains pages and web services used to manipulate shinken configuration files """
 
 import os
 
