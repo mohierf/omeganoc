@@ -16,3 +16,24 @@ p.intro {
 #config_main_list > thead {
     background-color: #3A4348;
 }
+
+.conf-menu {
+    display: -webkit-flex; /* Safari */
+    display: flex;
+}
+
+.conf-menu > li {
+    -webkit-flex: 1;  /* Safari 6.1+ */
+    -ms-flex: 1;  /* IE 10 */    
+    flex: 1;
+    border: 1px solid #555;
+}
+
+.conf-menu > li > a {
+    display: block;
+    text-align: center;
+    background-color: #DDD;
+    color: #000;
+    text-shadow: none;
+    line-height: 3em;
+}

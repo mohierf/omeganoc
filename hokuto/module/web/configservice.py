@@ -27,11 +27,22 @@ import os
 from pynag.Utils import paths
 from pynag.Parsers import config
 
-from flask import jsonify, render_template
+from flask import jsonify, render_template, abort
 from flask.ext.login import login_required
 from werkzeug.contrib.cache import SimpleCache
 
 from . import app, cache
+
+_typekeys = {
+    'host': 'host_name',
+    'service': 'service_description',
+    'hostgroup': 'hostgroup_name',
+    'servicegroup': 'servicegroup_name',
+    'contact': 'contact_name',
+    'contactgroup': 'contactgroup_name',
+    'timeperiod': 'timeperiod_name',
+    'command': 'command_name',
+}
 
 def _getconf():
     conf = cache.get('nag_conf')
@@ -74,9 +85,33 @@ def _normalizestrings(data):
         #Everything else : return as-is
         return data
             
-            
+@app.route('/config/list/<type>')
+@login_required
+def conf_getdatalist(type):
+    """ Returns a JSON object containing all the data for objects of the specified type """
+    istemplate = False
+    if type.endswith('templates'):
+        istemplate = True
+        type = type[:-9]
+    else:
+        type = type[:-1] # Just remove the trailing s
+        
+    if type not in _typekeys:
+        return jsonify({'success': False, 'errormessage': 'Unknown object type'}), 404
+    key = _typekeys[type]
+    if istemplate:
+        key = 'name'
+    conf = _getconf()
+    datakey = 'all_' + type
+    if datakey in conf.data:
+        data = _normalizestrings([i for i in conf['all_' + type] if key in i])
+    else:
+        # If the key does not exist, it's usually because no elements of that type were found in the config files
+        data = []
+    return jsonify({'success': True, 'data': data})
     
-@app.route('/config/list')
+            
+@app.route('/config')
 @login_required
 def config_list():
     return render_template('config/list.html')
@@ -86,12 +121,4 @@ def config_list():
 def config_can_edit():
     confpath = paths.find_main_configuration_file()
     result = os.access(confpath, os.W_OK)
-    return jsonify({'result':result})
-
-@app.route('/config/hosts')
-@login_required
-def config_get_hosts():
-    conf = _getconf()
-    #data = [{'name':_readStr(h, 'host_name'), 'alias':_readStr(h, 'alias')} for h in conf['all_host'] if 'host_name' in h]
-    data = _normalizestrings([h for h in conf['all_host'] if 'host_name' in h])
-    return jsonify({'data':data})
+    return jsonify({'success': True, 'data':result})
