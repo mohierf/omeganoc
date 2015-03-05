@@ -24,13 +24,14 @@ import os
 from pynag.Utils import paths
 from pynag.Parsers import config
 
-from flask import jsonify, render_template, abort
+from flask import jsonify, render_template, abort, request
 from flask.ext.login import login_required
 from wtforms import Form, TextField, SelectField, SelectMultipleField, TextAreaField,  validators
 from wtforms.fields.html5 import IntegerField, URLField
 from werkzeug.contrib.cache import SimpleCache
 from shinken.property import none_object
 import shinken.objects
+from shinken.objects.config import Config
 
 from . import app, cache
 
@@ -128,13 +129,11 @@ def conf_getdatalist(type):
 def config_list():
     return render_template('config/list.html')
 
-@app.route('/config/<type>/<id>')
+@app.route('/config/<type>/<id>', methods=['GET', 'POST'])
 @login_required
 def config_details(type, id):
-    print 'lel'
     # try to get the target element
     (type, istemplate) = _parsetype(type)
-    print type, istemplate
     if type not in _typekeys:
         abort(404) # Unsupported type
     
@@ -147,10 +146,21 @@ def config_details(type, id):
     if target is None:
         abort(404) # Unknown id
     
-    form = HostForm()
-    _fillform(form, target)
+    form = HostForm(request.form)
     _annotateform(form, target)
-    
+    if request.method == 'POST':
+        print 'iz POST!'
+        if form.validate():
+            print 'also iz valid!'
+            # Save !
+            _save_existing(target, form)
+        else:
+            print 'iz not valid :('
+            print form.errors
+ 
+    else: #GET
+        # Fill the form with the data from the configuration file
+        _fillform(form, target)
     return render_template('config/details.html', type=type, id=id, data=_normalizestrings(target), form=form)
     
 @app.route('/config/canwrite')
@@ -160,6 +170,66 @@ def config_can_edit():
     result = os.access(confpath, os.W_OK)
     return jsonify({'success': True, 'data':result})
 
+# def check_config(confpath):
+    # conf = Config()
+    # buf = conf.read_config(confpath)
+    # raw_objects = conf.read_config_buf(buf)
+    # conf.create_objects(raw_objects)
+    # # Checkpoint
+    # if not conf.is_correct:
+        # return False
+    
+    # conf.linkify_templates()
+    # conf.apply_inheritance()
+    # conf.explode()
+    # conf.apply_implicit_inheritance()
+    # conf.fill_default()
+    # conf.remove_templates()
+    # conf.compute_hash()
+    # conf.override_properties()
+    # conf.linkify()
+    # conf.apply_dependencies()
+    # conf.hack_old_nagios_parameters()
+    # #conf.warn_about_unmanaged_parameters()
+    # conf.explode_global_conf()
+    # conf.propagate_timezone_option()
+    # conf.create_business_rules()
+    # conf.create_business_rules_dependencies()
+    # #conf.notice_about_useless_parameters()
+    # conf.is_correct()
+    # #conf.clean() # Not need to clean since we won't use the conf anyway
+    
+    # if not conf.conf_is_correct:
+        # return False
+    # return True
+    
+def _save_existing(data, form):
+    # Extract filled fields from the form
+    fdata = {k.name:k.data for k in form if k.data is not None and (not hasattr(k.data, '__len__') or len(k.data) > 0)}
+    
+    # Turn arrays into strings ['a','b','c'] => 'a,b,c'
+    for k, v in fdata.iteritems():
+        if isinstance(v, list):
+            fdata[k] = ','.join(v)
+    print 'saving fdata', fdata
+    
+    attr = data['meta']['defined_attributes']
+    for i in attr:
+        if i not in fdata:
+            # Remove
+            print 'Remove ' + i
+            
+        elif fdata[i] != attr[i]:
+            # Edit
+            currentval = fdata[i]
+            print 'Changing {0} from {1} to {2}'.format(i, attr[i], currentval)
+    
+    for k, v in fdata.iteritems():
+        if v is not None and v != '' and v != [] and k not in attr:
+            # Create
+            print 'Creating attribute {0}={1}'.format(k, v)
+    
+    
 # #########################################################################################################
 # Form tools
 
@@ -227,11 +297,21 @@ def _createannotation(value, inherited):
     return value
             
 def _listobjects(type, key = None):
+    print 'listing objects of type ' + type
+    # A template ?
+    is_template = False
+    if type.endswith('template'):
+        is_template = True
+        type = type[:-8]
     if key is None:
-        key = type + '_name'
+        if is_template:
+            key = 'name'
+        else:
+            key = type + '_name'
     conf = _getconf()
     typekey = 'all_' + type
     if typekey in conf.data:
+        print 'key is ' + key
         result = [i[key] for i in conf.data[typekey] if key in i]
         result.sort()
         return result
@@ -261,29 +341,39 @@ class HostForm(Form):
     notes = TextAreaField('Notes')
     notes_url = URLField('Notes URL')
     action_url = URLField('Action URL')
+    labels = TextField('Labels')
     
     #Structure
     parents = SelectMultipleField('Parents', choices=_listobjects_choices('host'))
     hostgroups = SelectMultipleField('Host groups', choices=_listobjects_choices('hostgroup'))
+    realm = SelectField('Realm', choices=_listobjects_choices('realm', True))
+    service_overrides = TextField('Service overrides')
+    service_excludes = SelectMultipleField('Poller tag', choices=_listobjects_choices('service', False, 'service_description'))
+    name = TextField('Template name')
+    use = SelectField('Template used', choices=_listobjects_choices('hosttemplate', True))
+    register = SelectField('Register', choices=_listboolean_choices())
     
     #Checking
     check_command = SelectField('Check command', choices=_listobjects_choices('command', True))
     initial_state = SelectField('Initial state', choices=[('', '<unspecified>'), ('o','Up (o)'), ('d','Down (d)'), ('u','Unknown (u)')])
     max_check_attempts = IntegerField('Maximum check attempts', validators=[validators.Optional(), validators.NumberRange(0)])
-    check_interval = IntegerField('Check interval')
-    retry_interval = IntegerField('Retry interval')
+    check_interval = IntegerField('Check interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    retry_interval = IntegerField('Retry interval', validators=[validators.Optional(), validators.NumberRange(0)])
     active_checks_enabled = SelectField('Enable active notifications', choices=_listboolean_choices())
     passive_checks_enabled = SelectField('Enable passive notifications', choices=_listboolean_choices())
-    check_period = SelectField('Check command', choices=_listobjects_choices('timeperiod', True))
+    check_period = SelectField('Check period', choices=_listobjects_choices('timeperiod', True))
+    maintenance_period = SelectField('Maintenance period', choices=_listobjects_choices('timeperiod', True))
     obsess_over_host = SelectField('Obsess over host', choices=_listboolean_choices())
     check_freshness = SelectField('Check freshness', choices=_listboolean_choices())
-    freshness_threshold = IntegerField('Freshness threshold')
+    freshness_threshold = IntegerField('Freshness threshold', validators=[validators.Optional(), validators.NumberRange(0)])
+    poller_tag = TextField('Poller tag') # TODO : Show a list of existing tags + 'None' ?
+    resultmodulations = SelectMultipleField('Result modulations', choices=_listobjects_choices('resultmodulation'))
     
     #Status management
     event_handler = SelectField('Event handler', choices=_listobjects_choices('command', True))
     event_handler_enabled = SelectField('Event handler enabled', choices=_listboolean_choices())
-    low_flap_threshold = IntegerField('Low flap threshold')
-    high_flap_threshold = IntegerField('High flap threshold')
+    low_flap_threshold = IntegerField('Low flap threshold', validators=[validators.Optional(), validators.NumberRange(0)])
+    high_flap_threshold = IntegerField('High flap threshold', validators=[validators.Optional(), validators.NumberRange(0)])
     flap_detection_enabled = SelectField('Flap detection enabled', choices=_listboolean_choices())
     flap_detection_options = SelectMultipleField('Flap detection options', choices=[('o','Up (o)'), ('d','Down (d)'), ('u','Unknown (u)')])
     retain_status_information = SelectField('Retain status info', choices=_listboolean_choices())
@@ -293,11 +383,30 @@ class HostForm(Form):
     notifications_enabled = SelectField('Enable notifications', choices=_listboolean_choices())
     contacts = SelectMultipleField('Contacts', choices=_listobjects_choices('contact'))
     contact_groups = SelectMultipleField('Contact groups', choices=_listobjects_choices('contactgroup'))
-    notification_interval = IntegerField('Notification interval')
-    first_notification_delay = IntegerField('First notification delay')
+    notification_interval = IntegerField('Notification interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    first_notification_delay = IntegerField('First notification delay', validators=[validators.Optional(), validators.NumberRange(0)])
     notification_period = SelectField('Notification period', choices=_listobjects_choices('timeperiod', True))
     notification_options = SelectMultipleField('Notification options', choices=[('d','Down (d)'), ('u','Unknown (u)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+    escalations = SelectMultipleField('Escalations', choices=_listobjects_choices('escalation'))
+    
+    # Business rules
+    business_impact = IntegerField('Business impact', validators=[validators.Optional(), validators.NumberRange(0, 5)])
+    business_impact_modulations = SelectMultipleField('Business impact modulations', choices=_listobjects_choices('businessimpactmodulation'))
+    business_rule_output_template = TextField('Business rule output template')
+    business_rule_smart_notifications = SelectField('Enable smart notifications', choices=_listboolean_choices())
+    business_rule_downtime_as_ack = SelectField('Include downtimes in smart notifications', choices=_listboolean_choices())
+    business_rule_host_notification_options = SelectMultipleField('Business rule host notification options', choices=[('d','Down (d)'), ('u','Unknown (u)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+    business_rule_service_notification_options = SelectMultipleField('Business rule service notification options', choices=[('w','Warning (w)'), ('u','Unknown (u)'), ('c', 'Critical (c)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+    
+    #Snapshots
+    snapshot_enabled = SelectField('Enable snapshot', choices=_listboolean_choices())
+    snapshot_command = SelectField('Snapshot command', choices=_listobjects_choices('command', True))
+    snapshot_period = SelectField('Snapshot period', choices=_listobjects_choices('timeperiod', True))
+    snapshot_criteria = SelectMultipleField('Snapshot criteria', choices=[('d','Down (d)'), ('u','Unknown (u)')])
+    snapshot_interval = IntegerField('Snapshot interval', validators=[validators.Optional(), validators.NumberRange(0)])
     
     # Misc.
     process_perf_data = SelectField('Process perf data', choices=_listboolean_choices())
     stalking_options = SelectMultipleField('Stalking options', choices=[('o','Up (o)'), ('d','Down (d)'), ('u','Unknown (u)')])
+    trigger_broker_raise_enabled = SelectField('Enable trigger', choices=_listboolean_choices())    
+    trigger_name = TextField('Trigger name')

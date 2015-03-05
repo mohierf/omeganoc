@@ -29,7 +29,7 @@ form > fieldset > legend:before {
     height: 10px;
     z-index: -1;
     left: 4px;
-    top: 30%;
+    top: 15px;
     background: url('../images/dragr.png') 0 0 no-repeat;
     transform: rotate(90deg);
     transform-origin: 5px 5px;

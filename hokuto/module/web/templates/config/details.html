@@ -40,7 +40,7 @@
   <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
   <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
   
-  <form class="details-form">
+  <form class="details-form" method="POST">
     <fieldset>
         <legend>Description</legend>
         
@@ -51,12 +51,19 @@
         {{ _rf(form.notes) }}
         {{ _rf(form.notes_url) }}
         {{ _rf(form.action_url) }}
+        {{ _rf(form.labels) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Structure</legend>
         
         {{ _rf(form.parents) }}
         {{ _rf(form.hostgroups) }}
+        {{ _rf(form.realm) }}
+        {{ _rf(form.service_overrides) }}
+        {{ _rf(form.service_excludes) }}
+        {{ _rf(form.name) }}
+        {{ _rf(form.use) }}
+        {{ _rf(form.register) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Checking</legend>
@@ -69,10 +76,13 @@
         {{ _rf(form.active_checks_enabled) }}
         {{ _rf(form.passive_checks_enabled) }}
         {{ _rf(form.check_period) }}
+        {{ _rf(form.maintenance_period) }}
         {{ _rf(form.obsess_over_host) }}
         {{ _rf(form.check_freshness) }}
         {{ _rf(form.max_check_attempts) }}
         {{ _rf(form.freshness_threshold) }}
+        {{ _rf(form.poller_tag) }}
+        {{ _rf(form.resultmodulations) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Status management</legend>
@@ -94,12 +104,37 @@
         {{ _rf(form.contact_groups) }}
         {{ _rf(form.notification_interval) }}
         {{ _rf(form.first_notification_delay) }}
+        {{ _rf(form.notification_period) }}
+        {{ _rf(form.notification_options) }}
+        {{ _rf(form.escalations) }}
+    </fieldset>
+    <fieldset class="collapsed">
+        <legend>Business rules</legend>
+        
+        {{ _rf(form.business_impact) }}
+        {{ _rf(form.business_impact_modulations) }}
+        {{ _rf(form.business_rule_output_template) }}
+        {{ _rf(form.business_rule_smart_notifications) }}
+        {{ _rf(form.business_rule_downtime_as_ack) }}
+        {{ _rf(form.business_rule_host_notification_options) }}
+        {{ _rf(form.business_rule_service_notification_options) }}
+    </fieldset>
+    <fieldset>
+        <legend>Snapshots</legend>
+        
+        {{_rf(form.snapshot_enabled) }}
+        {{_rf(form.snapshot_command) }}
+        {{_rf(form.snapshot_period) }}
+        {{_rf(form.snapshot_criteria) }}
+        {{_rf(form.snapshot_interval) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Misc.</legend>
         
         {{ _rf(form.process_perf_data) }}
         {{ _rf(form.stalking_options) }}
+        {{ _rf(form.trigger_broker_raise_enabled) }}
+        {{ _rf(form.trigger_name) }}
     </fieldset>
     
     <section>
