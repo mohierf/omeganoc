@@ -21,7 +21,7 @@
 <p>
     {{ field.label }}
     {{ field(**kwargs)|safe }}
-    <span class="field-description">{{ field.description }}</span>
+    {% if field.description %}<span class="field-description">{{ field.description }}</span>{% endif %}
     {% if field.errors %}
         {% for error in field.errors %}
             <span class="error"> {{error}} </span>
