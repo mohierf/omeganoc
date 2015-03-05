@@ -55,6 +55,7 @@ define(['jquery', 'config.data', 'select2', 'jquery.validate'], function(jQuery,
         // Select2 lists
         jQuery('select[multiple]').select2({
             width: '400px',
+            placeholder: 'Empty list',
         });
         
         // Open / collapse fieldsets
