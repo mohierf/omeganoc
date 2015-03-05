@@ -270,8 +270,9 @@ def _createannotation(value, inherited):
     inherited tells if the default value is applied because it's inherited
     (True) or just because no value is available (False)
     """
+    print 'create annotation for {0}'.format(value)
     empty = False
-    if value is None:
+    if value is None or value == ['']:
         empty = True
     elif hasattr(value, '__len__') and len(value) == 0:
         empty = True
