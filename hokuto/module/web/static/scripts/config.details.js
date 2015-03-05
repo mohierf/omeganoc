@@ -44,6 +44,19 @@ define(['jquery', 'config.data', 'select2', 'jquery.validate'], function(jQuery,
                     case 'shortname':
                         field.attr('required', 'required');
                         field.attr('pattern', '^[^`~!$%^&*"|\'<>?,()=]+$');
+                        field.attr('placeholder', 'Unspecified name');
+                        break;
+                    case 'string':
+                        field.attr('placeholder', 'Unspecified text');
+                        break;
+                    case 'url':
+                        field.attr('placeholder', 'Unspecified URL');
+                        break;
+                    case 'email':
+                        field.attr('placeholder', 'Unspecified email');
+                        break;
+                    case 'address':
+                        field.attr('placeholder', 'Unspecified address');
                         break;
                 }
             }
