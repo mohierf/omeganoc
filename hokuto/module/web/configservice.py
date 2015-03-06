@@ -88,7 +88,7 @@ def _normalizestrings(data):
         return unicode(data, errors='replace')
     elif isinstance(data, unicode):
         # Already unicode strings : return as-is
-        return value
+        return data
     elif isinstance(data, list):
         # Lists : check each element
         for val in xrange(0, len(data)):
@@ -129,20 +129,20 @@ def conf_getdatalist(type):
 def config_list():
     return render_template('config/list.html')
 
-@app.route('/config/<type>/<id>', methods=['GET', 'POST'])
+@app.route('/config/<objtype>/<objid>', methods=['GET', 'POST'])
 @login_required
-def config_details(type, id):
+def config_details(objtype, objid):
     # try to get the target element
-    (type, istemplate) = _parsetype(type)
-    if type not in _typekeys:
+    (objtype, istemplate) = _parsetype(objtype)
+    if objtype not in _typekeys:
         abort(404) # Unsupported type
     
     conf = _getconf()
-    typekey = 'all_' + type
+    typekey = 'all_' + objtype
     if typekey not in conf.data:
         abort(404) # No element of this type
-    primkey = _typekeys[type]
-    target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == id), None)
+    primkey = _typekeys[objtype]
+    target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == objid), None)
     if target is None:
         abort(404) # Unknown id
     
@@ -151,17 +151,15 @@ def config_details(type, id):
     if request.method == 'POST':
         print 'iz POST!'
         if form.validate():
-            print 'also iz valid!'
             # Save !
-            _save_existing(target, form)
+            _save_existing(conf, target, form, False)
         else:
             print 'iz not valid :('
-            print form.errors
  
     else: #GET
         # Fill the form with the data from the configuration file
         _fillform(form, target)
-    return render_template('config/details.html', type=type, id=id, data=_normalizestrings(target), form=form)
+    return render_template('config/details.html', type=objtype, id=objid, data=_normalizestrings(target), form=form)
     
 @app.route('/config/canwrite')
 @login_required
@@ -203,31 +201,62 @@ def config_can_edit():
         # return False
     # return True
     
-def _save_existing(data, form):
+def _save_existing(conf, data, form, form_is_comprehensive):
+    """ 
+    Saves an existing item data 
+    
+    *conf* is the root configuration object that the modified object has been extracted from
+    *data* is the object that should be modified, extracted from *config*
+    *form* is the form instance containing the changes that should be applied to *data*
+    *form_is_comprehensive* determines if the form contains ALL of the possible directives of the target data object.
+      If True, any directive in the original data that is not in the form will be removed. If false, only directives
+      present in the form with an empty value will be removed.
+    """
     # Extract filled fields from the form
-    fdata = {k.name:k.data for k in form if k.data is not None and (not hasattr(k.data, '__len__') or len(k.data) > 0)}
+    fdata = {k.name:k.data for k in form}
+    did_change = False
     
     # Turn arrays into strings ['a','b','c'] => 'a,b,c'
     for k, v in fdata.iteritems():
         if isinstance(v, list):
             fdata[k] = ','.join(v)
-    print 'saving fdata', fdata
     
     attr = data['meta']['defined_attributes']
     for i in attr:
         if i not in fdata:
-            # Remove
+            # If the form is NOT comprehensive, do not remove a key that is not in the form
+            if form_is_comprehensive:
+                # Remove
+                print 'Remove ' + i
+                data[i] = None
+                did_change = True
+        elif not fdata[i]:
             print 'Remove ' + i
+            data[i] = None
+            did_change = True
             
-        elif fdata[i] != attr[i]:
+        elif str(fdata[i]) != attr[i]:
             # Edit
             currentval = fdata[i]
             print 'Changing {0} from {1} to {2}'.format(i, attr[i], currentval)
+            data[i] = currentval
+            did_change = True
     
     for k, v in fdata.iteritems():
         if v is not None and v != '' and v != [] and k not in attr:
             # Create
             print 'Creating attribute {0}={1}'.format(k, v)
+            data[k] = v
+            # If we don't remove the field name from the data's template fields, it won't be saved by pynag
+            if k in data['meta']['template_fields']:
+                del data['meta']['template_fields'][k]
+            did_change = True
+            
+    if did_change:
+        print 'Commiting !! ' + data['meta']['filename']
+        data['meta']['needs_commit'] = True
+        conf.commit()
+    return did_change
     
     
 # #########################################################################################################
@@ -237,7 +266,6 @@ def _fillform(form, data):
     for k,v in data['meta']['defined_attributes'].iteritems():
         field = getattr(form, k, None)
         if field is not None:
-            print 'Setting field {0} to {1}'.format(k, v)
             if isinstance(field, SelectMultipleField):
                 field.process(None, v.split(','))
             else:
@@ -270,7 +298,6 @@ def _createannotation(value, inherited):
     inherited tells if the default value is applied because it's inherited
     (True) or just because no value is available (False)
     """
-    print 'create annotation for {0}'.format(value)
     empty = False
     if value is None or value == ['']:
         empty = True
@@ -298,7 +325,6 @@ def _createannotation(value, inherited):
     return value
             
 def _listobjects(type, key = None):
-    print 'listing objects of type ' + type
     # A template ?
     is_template = False
     if type.endswith('template'):
@@ -312,7 +338,6 @@ def _listobjects(type, key = None):
     conf = _getconf()
     typekey = 'all_' + type
     if typekey in conf.data:
-        print 'key is ' + key
         result = [i[key] for i in conf.data[typekey] if key in i]
         result.sort()
         return result
