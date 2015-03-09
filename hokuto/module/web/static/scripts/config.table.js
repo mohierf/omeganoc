@@ -151,7 +151,7 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
         columns.push({ 'title': 'Edit',
                        'data': targetStruct.key,
                        'render': function(data, type, row, meta) {
-                           return '<a href="' + createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + data) + '" class="button">Edit</a>';
+                           return '<a href="' + createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data)) + '" class="button">Edit</a>';
                        },
                        'orderable': false,
                        'searchable': false});

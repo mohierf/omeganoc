@@ -133,18 +133,31 @@ def config_list():
 @login_required
 def hostgroup_details(objid):
     return _get_details('hostgroup', False, objid, HostGroupForm)
+
+@app.route('/config/hostgrouptemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def hostgrouptemplate_details(objid):
+    return _get_details('hostgroup', True, objid, HostGroupForm)
     
 @app.route('/config/host/<objid>', methods=['GET', 'POST'])
 @login_required
 def host_details(objid):
     return _get_details('host', False, objid, HostForm)
 
+@app.route('/config/hosttemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def hosttemplate_details(objid):
+    return _get_details('host', True, objid, HostForm)
+
 def _get_details(objtype, istemplate, objid, formtype):
     conf = _getconf()
     typekey = 'all_' + objtype
     if typekey not in conf.data:
         abort(404) # No element of this type
-    primkey = _typekeys[objtype]
+    if istemplate:
+        primkey = 'name'
+    else:
+        primkey = _typekeys[objtype]
     target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == objid), None)
     if target is None:
         abort(404) # Unknown id
