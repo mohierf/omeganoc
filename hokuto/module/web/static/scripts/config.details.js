@@ -57,7 +57,7 @@ define(['jquery', 'config.data', 'select2', 'jquery.validate'], function(jQuery,
                         break;
                     case 'address':
                         field.attr('placeholder', 'Unspecified address');
-                        break;
+                        break;  
                 }
             }
         }

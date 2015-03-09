@@ -368,6 +368,11 @@ define([], function() {
             'is_required': false,
             'description': 'An optional URL that can be used to provide more actions to be performed on the host group',
             'type': 'url'},
+        'realm': {
+            'name': 'realm',
+            'is_required': false,
+            'description': 'Defines in which realm all hosts of this hostgroup will be put into',
+            'type': 'realm'},
     };
     
     var service_properties = {

@@ -129,14 +129,17 @@ def conf_getdatalist(type):
 def config_list():
     return render_template('config/list.html')
 
-@app.route('/config/<objtype>/<objid>', methods=['GET', 'POST'])
+@app.route('/config/hostgroup/<objid>', methods=['GET', 'POST'])
 @login_required
-def config_details(objtype, objid):
-    # try to get the target element
-    (objtype, istemplate) = _parsetype(objtype)
-    if objtype not in _typekeys:
-        abort(404) # Unsupported type
+def hostgroup_details(objid):
+    return _get_details('hostgroup', False, objid, HostGroupForm)
     
+@app.route('/config/host/<objid>', methods=['GET', 'POST'])
+@login_required
+def host_details(objid):
+    return _get_details('host', False, objid, HostForm)
+
+def _get_details(objtype, istemplate, objid, formtype):
     conf = _getconf()
     typekey = 'all_' + objtype
     if typekey not in conf.data:
@@ -146,7 +149,7 @@ def config_details(objtype, objid):
     if target is None:
         abort(404) # Unknown id
     
-    form = HostForm(request.form)
+    form = formtype(request.form)
     _annotateform(form, target)
     if request.method == 'POST':
         print 'iz POST!'
@@ -159,7 +162,7 @@ def config_details(objtype, objid):
     else: #GET
         # Fill the form with the data from the configuration file
         _fillform(form, target)
-    return render_template('config/details.html', type=objtype, id=objid, data=_normalizestrings(target), form=form)
+    return render_template('config/details-{0}.html'.format(objtype), type=objtype, id=objid, data=_normalizestrings(target), form=form)
     
 @app.route('/config/canwrite')
 @login_required
@@ -436,3 +439,16 @@ class HostForm(Form):
     stalking_options = SelectMultipleField('Stalking options', choices=[('o','Up (o)'), ('d','Down (d)'), ('u','Unknown (u)')])
     trigger_broker_raise_enabled = SelectField('Enable trigger', choices=_listboolean_choices())    
     trigger_name = TextField('Trigger name')
+
+class HostGroupForm(Form):
+    # Description
+    hostgroup_name = TextField('Hostgroup name')
+    alias = TextField('Alias')
+    notes = TextAreaField('Notes')
+    notes_url = URLField('Notes URL')
+    action_url = URLField('Action URL')
+    
+    #Structure
+    members = SelectMultipleField('Members', choices=_listobjects_choices('host'))
+    hostgroup_members = SelectMultipleField('Host groups', choices=_listobjects_choices('hostgroup'))
+    realm = SelectField('Realm', choices=_listobjects_choices('realm', True))
