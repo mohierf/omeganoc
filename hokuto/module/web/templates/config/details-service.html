@@ -22,9 +22,12 @@
     {{ field.label }}
     {{ field(**kwargs)|safe }}
     {% if field.description %}<span class="field-description">{{ field.description }}</span>{% endif %}
+    {% if field.loaderror %}
+        <span class="error">{{ field.loaderror }}</error>
+    {% endif %}
     {% if field.errors %}
         {% for error in field.errors %}
-            <span class="error"> {{error}} </span>
+            <span class="error">{{ error }}</span>
         {% endfor %}
     {% endif %}
 </p>
@@ -40,14 +43,24 @@
   <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
   <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
   
+  {% if form.loaderrors %}
+  <div class="errors">
+    <h4>The following fields are invalid in the config file and have been emptied :</h4>
+    <ul>
+    {% for error in form.loaderrors %}
+        <li>{{ error }}</li>
+    {% endfor %}
+    </ul>
+    <p>Please look at the fields themselves for details</p>
+  </div>
+  {% endif %}
+  
   <form class="details-form" method="POST">
     <fieldset>
         <legend>Description</legend>
         
-        {{ _rf(form.host_name) }}
-        {{ _rf(form.alias) }}
+        {{ _rf(form.service_description) }}
         {{ _rf(form.display_name) }}
-        {{ _rf(form.address) }}
         {{ _rf(form.notes) }}
         {{ _rf(form.notes_url) }}
         {{ _rf(form.action_url) }}
@@ -56,11 +69,11 @@
     <fieldset class="collapsed">
         <legend>Structure</legend>
         
-        {{ _rf(form.parents) }}
-        {{ _rf(form.hostgroups) }}
-        {{ _rf(form.realm) }}
-        {{ _rf(form.service_overrides) }}
-        {{ _rf(form.service_excludes) }}
+        {{ _rf(form.host_name) }}
+        {{ _rf(form.hostgroup_name) }}
+        {{ _rf(form.host_dependency_enabled) }}
+        {{ _rf(form.servicegroups) }}
+        {{ _rf(form.service_dependencies) }}
         {{ _rf(form.name) }}
         {{ _rf(form.use) }}
         {{ _rf(form.register) }}
@@ -77,11 +90,11 @@
         {{ _rf(form.passive_checks_enabled) }}
         {{ _rf(form.check_period) }}
         {{ _rf(form.maintenance_period) }}
-        {{ _rf(form.obsess_over_host) }}
+        {{ _rf(form.is_volatile) }}
+        {{ _rf(form.obsess_over_service) }}
         {{ _rf(form.check_freshness) }}
         {{ _rf(form.freshness_threshold) }}
         {{ _rf(form.poller_tag) }}
-        {{ _rf(form.resultmodulations) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Status management</legend>
@@ -105,13 +118,11 @@
         {{ _rf(form.first_notification_delay) }}
         {{ _rf(form.notification_period) }}
         {{ _rf(form.notification_options) }}
-        {{ _rf(form.escalations) }}
     </fieldset>
     <fieldset class="collapsed">
         <legend>Business rules</legend>
         
         {{ _rf(form.business_impact) }}
-        {{ _rf(form.business_impact_modulations) }}
         {{ _rf(form.business_rule_output_template) }}
         {{ _rf(form.business_rule_smart_notifications) }}
         {{ _rf(form.business_rule_downtime_as_ack) }}
@@ -132,6 +143,7 @@
         
         {{ _rf(form.process_perf_data) }}
         {{ _rf(form.stalking_options) }}
+        {{ _rf(form.duplicate_foreach) }}
         {{ _rf(form.trigger_broker_raise_enabled) }}
         {{ _rf(form.trigger_name) }}
     </fieldset>

@@ -26,7 +26,7 @@ from pynag.Parsers import config
 
 from flask import jsonify, render_template, abort, request
 from flask.ext.login import login_required
-from wtforms import Form, TextField, SelectField, SelectMultipleField, TextAreaField,  validators
+from wtforms import Form, TextField, SelectField, SelectMultipleField, TextAreaField, SelectFieldBase,  validators
 from wtforms.fields.html5 import IntegerField, URLField
 from werkzeug.contrib.cache import SimpleCache
 from shinken.property import none_object
@@ -149,18 +149,81 @@ def host_details(objid):
 def hosttemplate_details(objid):
     return _get_details('host', True, objid, HostForm)
 
-def _get_details(objtype, istemplate, objid, formtype):
+@app.route('/config/service/<objid>/<containers>', methods=['GET', 'POST'])
+@login_required
+def service_details(objid, containers):
+    """
+    Shows the details page for a service. The service to show is specified with *objid* and *containers*:
+    - *objid* contains the service_description
+    - *containers* contains the host and hostgroup, concatenated together. The hosts are prefixed with $ and hostgroups are prefixed with +
+    """
+    if len(containers) == 0:
+        abort(404)
+    
+    # This function will 
+    def searchservice(conf):
+        ihost = -1
+        ihostgroup = -1
+        try:
+            ihost = containers.index('$')
+        except ValueError:
+            pass
+        try:
+            ihostgroup = containers.index('+')
+        except ValueError:
+            pass
+        
+        host = None
+        hostgroup = None
+        if ihost >= 0:
+            if ihostgroup >= 0:
+                if ihost > ihostgroup:
+                    hostgroup = containers[ihostgroup+1:ihost-1]
+                    host = containers[ihost+1:]
+                else:
+                    host = containers[ihost+1:ihostgroup-1]
+                    hostgroup = containers[ihostgroup+1:]
+                target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
+                                                                'host_name' in e and e['host_name'] == host and 
+                                                                'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
+
+            else:
+                host = containers[ihost+1:]
+                target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
+                                                                'host_name' in e and e['host_name'] == host), None)
+        else:
+            hostgroup = containers[ihostgroup+1:]
+            print 'Getting it with hostgroup ', hostgroup
+            target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
+                                                            'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
+        if not target:
+            abort(404)
+        return target
+    
+    return _get_details('service', False, objid + '/' + containers, ServiceForm, searchservice)
+
+@app.route('/config/servicetemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def servicetemplate_details(objid):
+    return _get_details('service', True, objid, ServiceForm)
+    
+def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
     conf = _getconf()
-    typekey = 'all_' + objtype
-    if typekey not in conf.data:
-        abort(404) # No element of this type
-    if istemplate:
-        primkey = 'name'
+    if not targetfinder:
+        typekey = 'all_' + objtype
+        if typekey not in conf.data:
+            abort(404) # No element of this type
+        if istemplate:
+            primkey = 'name'
+        else:
+            primkey = _typekeys[objtype]
+        target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == objid), None)
     else:
-        primkey = _typekeys[objtype]
-    target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == objid), None)
+        target = targetfinder(conf)
     if target is None:
-        abort(404) # Unknown id
+        return 'NO TARGET', 404
+        #abort(404)
+        
     
     form = formtype(request.form)
     _annotateform(form, target)
@@ -279,13 +342,27 @@ def _save_existing(conf, data, form, form_is_comprehensive):
 # Form tools
 
 def _fillform(form, data):
+    form.loaderrors = []
     for k,v in data['meta']['defined_attributes'].iteritems():
         field = getattr(form, k, None)
+        print 'Filling {0} with {1}, found field "{2}"'.format(k, v, field)
         if field is not None:
+            if isinstance(field, SelectFieldBase):
+                # Check that the current value is available
+                # If not we'll consider it to be a configuration error
+                for name, val in field.choices:
+                    if name == v:
+                        break
+                else:
+                    # Current value not available
+                    form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
+                    field.loaderror = 'This field contained an element that does not exist ({0}), and it has been cleared.'.format(v)
+                    haserrors = True
             if isinstance(field, SelectMultipleField):
                 field.process(None, v.split(','))
             else:
                 field.process(None, v)
+    return len(form.loaderrors) == 0
                 
 def _annotateform(form, data):
     typedata = getattr(shinken.objects, data['meta']['object_type'].title(), None)
@@ -465,3 +542,81 @@ class HostGroupForm(Form):
     members = SelectMultipleField('Members', choices=_listobjects_choices('host'))
     hostgroup_members = SelectMultipleField('Host groups', choices=_listobjects_choices('hostgroup'))
     realm = SelectField('Realm', choices=_listobjects_choices('realm', True))
+    
+class ServiceForm(Form):
+    #Description
+    service_description = TextField('Service description')
+    display_name = TextField('Display name')
+    notes = TextAreaField('Notes')
+    notes_url = URLField('Notes URL')
+    action_url = URLField('Action URL')
+    labels = TextField('Labels')
+    
+    # Structure
+    host_name = SelectMultipleField('Host', choices=_listobjects_choices('host'))
+    # We cannot use the classic SelectMUltipleField for this field, because of the expression syntax available on this field that may get in the way
+    hostgroup_name = TextField('Host group')
+    host_dependency_enabled = SelectField('Host dependency enabled', choices=_listboolean_choices())
+    servicegroups = SelectMultipleField('Service groups', choices=_listobjects_choices('servicegroup'))
+    service_dependencies = SelectMultipleField('Service dependencies', choices=_listobjects_choices('service'))
+    name = TextField('Template name')
+    use = SelectField('Template used', choices=_listobjects_choices('servicetemplate', True))
+    register = SelectField('Register', choices=_listboolean_choices())
+    
+    # Checking
+    check_command = SelectField('Check command', choices=_listobjects_choices('command', True))
+    initial_state = SelectField('Initial state', choices=[('o','Ok (o)'), ('w','Warning (w)'), ('u','Unknown (u)'), ('c','Critical (c)')])
+    max_check_attempts = IntegerField('Max check attempts', validators=[validators.Optional(), validators.NumberRange(0)])
+    check_interval = IntegerField('Check interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    retry_interval = IntegerField('Retry interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    active_checks_enabled = SelectField('Enable active checks', choices=_listboolean_choices())
+    passive_checks_enabled = SelectField('Enable passive checks', choices=_listboolean_choices())
+    check_period = SelectField('Check period', choices=_listobjects_choices('timeperiod', True))
+    maintenance_period = SelectField('Maintenance period', choices=_listobjects_choices('timeperiod', True))
+    is_volatile = SelectField('Is volatile', choices=_listboolean_choices())
+    obsess_over_service = SelectField('Obsess over service', choices=_listboolean_choices())
+    check_freshness = SelectField('Check freshness', choices=_listboolean_choices())
+    freshness_threshold = IntegerField('Freshness threshold', validators=[validators.Optional(), validators.NumberRange(0)])
+    poller_tag = TextField('Poller tag') # TODO : Show a list of existing tags + 'None' ?
+
+    # Status management
+    event_handler = SelectField('Event handler', choices=_listobjects_choices('command', True))
+    event_handler_enabled = SelectField('Event handler enabled', choices=_listboolean_choices())
+    flap_detection_enabled = SelectField('Flap detection enabled', choices=_listboolean_choices())
+    low_flap_threshold = IntegerField('Low flap threshold', validators=[validators.Optional(), validators.NumberRange(0)])
+    high_flap_threshold = IntegerField('High flap threshold', validators=[validators.Optional(), validators.NumberRange(0)])
+    flap_detection_options = SelectMultipleField('Flap detection options', choices=[('o','Ok (o)'), ('w','Warning (w)'), ('c', 'Critical (c)'), ('u','Unknown (u)')])
+    retain_status_information = SelectField('Retain status info', choices=_listboolean_choices())
+    retain_nonstatus_information = SelectField('Retain non-status info', choices=_listboolean_choices())
+    
+    # Notifications
+    notifications_enabled = SelectField('Enable notifications', choices=_listboolean_choices())
+    contacts = SelectMultipleField('Contacts', choices=_listobjects_choices('contact'))
+    contact_groups = SelectMultipleField('Contact groups', choices=_listobjects_choices('contactgroup'))
+    notification_interval = IntegerField('Notification interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    first_notification_delay = IntegerField('First notification delay', validators=[validators.Optional(), validators.NumberRange(0)])
+    notification_period = SelectField('Notification period', choices=_listobjects_choices('timeperiod', True))
+    notification_options = SelectMultipleField('Notification options', choices=[('w','Warning (d)'), ('u','Unknown (u)'), ('c', 'Critical (c)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+
+    # Business rules
+    business_impact = IntegerField('Business impact', validators=[validators.Optional(), validators.NumberRange(0, 5)])
+    business_rule_output_template = TextField('Business rule output template')
+    business_rule_smart_notifications = SelectField('Enable smart notifications', choices=_listboolean_choices())
+    business_rule_downtime_as_ack = SelectField('Include downtimes in smart notifications', choices=_listboolean_choices())
+    business_rule_host_notification_options = SelectMultipleField('Business rule host notification options', choices=[('d','Down (d)'), ('u','Unknown (u)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+    business_rule_service_notification_options = SelectMultipleField('Business rule service notification options', choices=[('w','Warning (w)'), ('u','Unknown (u)'), ('c', 'Critical (c)'), ('r', 'Recovery (r)'), ('f', 'Flapping (f)'), ('s', 'Scheduled downtime starts/ends (s)'), ('n', 'None (n)')])
+    
+    # Snapshot
+    snapshot_enabled = SelectField('Enable snapshot', choices=_listboolean_choices())
+    snapshot_command = SelectField('Snapshot command', choices=_listobjects_choices('command', True))
+    snapshot_period = SelectField('Snapshot period', choices=_listobjects_choices('timeperiod', True))
+    snapshot_criteria = SelectMultipleField('Snapshot criteria', choices=[('d','Down (d)'), ('u','Unknown (u)')])
+    snapshot_interval = IntegerField('Snapshot interval', validators=[validators.Optional(), validators.NumberRange(0)])
+    
+    # Misc.
+    process_perf_data = SelectField('Process perf data', choices=_listboolean_choices())
+    stalking_options = SelectMultipleField('Stalking options', choices=[('o','Up (o)'), ('d','Down (d)'), ('u','Unknown (u)')])
+    duplicate_foreach = TextField('Duplicate for each')
+    trigger_broker_raise_enabled = SelectField('Enable trigger', choices=_listboolean_choices())    
+    trigger_name = TextField('Trigger name')
+  

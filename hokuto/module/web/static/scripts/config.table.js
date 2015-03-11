@@ -151,7 +151,20 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
         columns.push({ 'title': 'Edit',
                        'data': targetStruct.key,
                        'render': function(data, type, row, meta) {
-                           return '<a href="' + createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data)) + '" class="button">Edit</a>';
+                           // If it's a service then the URL needs to contain several primary keys
+                           var url = '';
+                           if(row.meta.object_type == 'service') {
+                             url = '/config/service/' + row.service_description + '/';
+                             if('host_name' in row && row.host_name)
+                                 url += '$' + row.host_name;
+                             if('hostgroup_name' in row && row.hostgroup_name)
+                                 url += '+' + row.hostgroup_name;
+                             url = createurl(url);
+                           }
+                           else {
+                             url = createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data));
+                           }
+                           return '<a href="' + url + '" class="button">Edit</a>';
                        },
                        'orderable': false,
                        'searchable': false});
