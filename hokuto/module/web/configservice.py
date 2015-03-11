@@ -32,6 +32,7 @@ from werkzeug.contrib.cache import SimpleCache
 from shinken.property import none_object
 import shinken.objects
 from shinken.objects.config import Config
+from shinken.property import BoolProp, PythonizeError
 
 from . import app, cache
 
@@ -343,21 +344,32 @@ def _save_existing(conf, data, form, form_is_comprehensive):
 
 def _fillform(form, data):
     form.loaderrors = []
+    typedata = getattr(shinken.objects, data['meta']['object_type'].title(), None)
     for k,v in data['meta']['defined_attributes'].iteritems():
         field = getattr(form, k, None)
-        print 'Filling {0} with {1}, found field "{2}"'.format(k, v, field)
         if field is not None:
+            # Check if the data is a boolean
+            if typedata and k in typedata.properties and isinstance(typedata.properties[k], BoolProp):
+                # It is; normalize all different boolean syntaxes so it's only '0' or '1'
+                print 'bool {0} is {1}'.format(k, v)
+                try:
+                    v = 'on' if BoolProp.pythonize(v) else 'off'
+                    print 'turned into ', v
+                except PythonizeError:
+                    form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
+                    field.loaderror = 'This field contained an invalid boolean value ({0}), and has been cleared.'.format(v)
+                    continue
             if isinstance(field, SelectFieldBase):
                 # Check that the current value is available
                 # If not we'll consider it to be a configuration error
                 for name, val in field.choices:
                     if name == v:
+                        print v, 'found in list'
                         break
                 else:
                     # Current value not available
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an element that does not exist ({0}), and it has been cleared.'.format(v)
-                    haserrors = True
             if isinstance(field, SelectMultipleField):
                 field.process(None, v.split(','))
             else:
@@ -446,7 +458,7 @@ def _listobjects_choices(type, addempty = False, key = None):
     return data
     
 def _listboolean_choices():
-    return [('', '<unspecified>'), ('y', 'Yes'), ('n', 'No')]
+    return [('', '<unspecified>'), ('on', 'Yes'), ('off', 'No')]
     
 # #########################################################################################################
 # Forms
