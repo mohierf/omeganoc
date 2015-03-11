@@ -330,6 +330,22 @@ define([], function() {
             'is_required': false,
             'description': '',
             'type': 'bool'},
+        'use': {
+            'name': 'use',
+            'is_required': false,
+            'description': '',
+            'type': 'hosttemplate'},
+        'register': {
+            'name': 'register',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'name': {
+            'name': 'name',
+            'is_required': false,
+            'description': '',
+            'type': 'shortname'},
+
     };
     
     var hostgroup_properties = {
@@ -565,6 +581,116 @@ define([], function() {
             'is_required': false,
             'description': 'An optional URL that can be used to provide more actions to be performed on the service',
             'type': 'url'},
+        'use': {
+            'name': 'use',
+            'is_required': false,
+            'description': '',
+            'type': 'servicetemplate'},
+        'register': {
+            'name': 'register',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'name': {
+            'name': 'name',
+            'is_required': false,
+            'description': '',
+            'type': 'shortname'},
+        'poller_tag': {
+            'name': 'poller_tag',
+            'is_required': false,
+            'description': '',
+            'type': 'string'},
+        'duplicate_foreach': {
+            'name': 'duplicate_foreach',
+            'is_required': false,
+            'description': '',
+            'type': 'string'},
+        'service_dependencies': {
+            'name': 'service_dependencies',
+            'is_required': false,
+            'description': '',
+            'type': '*service'},
+        'business_impact': {
+            'name': 'business_impact',
+            'is_required': false,
+            'description': '',
+            'type': 'integer'},
+        'maintenance_period': {
+            'name': 'maintenance_period',
+            'is_required': false,
+            'description': '',
+            'type': 'timeperiod'},
+        'host_dependency_enabled': {
+            'name': 'host_dependency_enabled',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'labels': {
+            'name': 'labels',
+            'is_required': false,
+            'description': '',
+            'type': 'string'},
+        'business_rule_output_template': {
+            'name': 'business_rule_output_template',
+            'is_required': false,
+            'description': '',
+            'type': 'string'},
+        'business_rule_smart_notifications': {
+            'name': 'business_rule_smart_notifications',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'business_rule_downtime_as_ack': {
+            'name': 'business_rule_downtime_as_ack',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'business_rule_host_notification_options': {
+            'name': 'business_rule_host_notification_options',
+            'is_required': false,
+            'description': '',
+            'type': '*enum[d:Down,u:Unreachable,r:Recovery,f:Flapping,s:Scheduled downtime,n:None]'},
+        'business_rule_service_notification_options': {
+            'name': 'business_rule_service_notification_options',
+            'is_required': false,
+            'description': '',
+            'type': '*enum[w:Warning,u:Unknown,c:Critical,r:Recovery,f:Flapping,s:Scheduled downtime,n:None]'},
+        'snapshot_enabled': {
+            'name': 'snapshot_enabled',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
+        'snapshot_command': {
+            'name': 'snapshot_command',
+            'is_required': false,
+            'description': '',
+            'type': 'command'},
+        'snapshot_period': {
+            'name': 'snapshot_period',
+            'is_required': false,
+            'description': '',
+            'type': 'timeperiod'},
+        'snapshot_criteria': {
+            'name': 'snapshot_criteria',
+            'is_required': false,
+            'description': '',
+            'type': '*enum[d:Down,u:Unreachable]'},
+        'snapshot_interval': {
+            'name': 'snapshot_interval',
+            'is_required': false,
+            'description': '',
+            'type': 'integer'},
+        'trigger_name': {
+            'name': 'trigger_name',
+            'is_required': false,
+            'description': '',
+            'type': 'string'},
+        'trigger_broker_raise_enabled': {
+            'name': 'trigger_broker_raise_enabled',
+            'is_required': false,
+            'description': '',
+            'type': 'bool'},
     };
     
     var servicegroup_properties = {
