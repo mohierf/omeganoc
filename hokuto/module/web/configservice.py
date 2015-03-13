@@ -481,7 +481,7 @@ class HostForm(Form):
     service_overrides = TextField('Service overrides')
     service_excludes = SelectMultipleField('Poller tag', choices=_listobjects_choices('service', False, 'service_description'))
     name = TextField('Template name')
-    use = SelectField('Template used', choices=_listobjects_choices('hosttemplate', True))
+    use = SelectMultipleField('Template used', choices=_listobjects_choices('hosttemplate'))
     register = SelectField('Register', choices=_listboolean_choices())
     
     #Checking
@@ -554,7 +554,10 @@ class HostGroupForm(Form):
     members = SelectMultipleField('Members', choices=_listobjects_choices('host'))
     hostgroup_members = SelectMultipleField('Host groups', choices=_listobjects_choices('hostgroup'))
     realm = SelectField('Realm', choices=_listobjects_choices('realm', True))
-    
+    name = TextField('Template name')
+    use = SelectMultipleField('Template used', choices=_listobjects_choices('hostgrouptemplate'))
+    register = SelectField('Register', choices=_listboolean_choices())
+   
 class ServiceForm(Form):
     #Description
     service_description = TextField('Service description')
@@ -572,7 +575,7 @@ class ServiceForm(Form):
     servicegroups = SelectMultipleField('Service groups', choices=_listobjects_choices('servicegroup'))
     service_dependencies = SelectMultipleField('Service dependencies', choices=_listobjects_choices('service'))
     name = TextField('Template name')
-    use = SelectField('Template used', choices=_listobjects_choices('servicetemplate', True))
+    use = SelectMultipleField('Template used', choices=_listobjects_choices('servicetemplate'))
     register = SelectField('Register', choices=_listboolean_choices())
     
     # Checking
