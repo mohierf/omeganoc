@@ -359,7 +359,20 @@ def _fillform(form, data):
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an invalid boolean value ({0}), and has been cleared.'.format(v)
                     continue
-            if isinstance(field, SelectFieldBase):
+            if isinstance(field, SelectMultipleField):
+                # Split the names list into an array
+                check = [i.strip() for i in v.split(',')]
+                v = []
+                for name, val in field.choices:
+                    if name in check:
+                        v.append(name)
+                # Did we find everything ?
+                if len(v) < len(check):
+                    # No, some values missing.
+                    form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
+                    field.loaderror = 'This field contained unkown elements (..), which have been removed.'
+                field.process(None, v)
+            elif isinstance(field, SelectField):
                 # Check that the current value is available
                 # If not we'll consider it to be a configuration error
                 for name, val in field.choices:
@@ -370,8 +383,6 @@ def _fillform(form, data):
                     # Current value not available
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an element that does not exist ({0}), and it has been cleared.'.format(v)
-            if isinstance(field, SelectMultipleField):
-                field.process(None, v.split(','))
             else:
                 field.process(None, v)
     return len(form.loaderrors) == 0
