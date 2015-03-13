@@ -351,10 +351,8 @@ def _fillform(form, data):
             # Check if the data is a boolean
             if typedata and k in typedata.properties and isinstance(typedata.properties[k], BoolProp):
                 # It is; normalize all different boolean syntaxes so it's only '0' or '1'
-                print 'bool {0} is {1}'.format(k, v)
                 try:
                     v = 'on' if BoolProp.pythonize(v) else 'off'
-                    print 'turned into ', v
                 except PythonizeError:
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an invalid boolean value ({0}), and has been cleared.'.format(v)
@@ -370,14 +368,13 @@ def _fillform(form, data):
                 if len(v) < len(check):
                     # No, some values missing.
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
-                    field.loaderror = 'This field contained unkown elements (..), which have been removed.'
+                    field.loaderror = 'This field contained unkown elements ({0}), which have been removed.'.format(', '.join([i for i in check if i not in v]))
                 field.process(None, v)
             elif isinstance(field, SelectField):
                 # Check that the current value is available
                 # If not we'll consider it to be a configuration error
                 for name, val in field.choices:
                     if name == v:
-                        print v, 'found in list'
                         break
                 else:
                     # Current value not available
