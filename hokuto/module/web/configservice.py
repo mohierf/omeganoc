@@ -110,11 +110,14 @@ def conf_getdatalist(type):
     """ Returns a JSON object containing all the data for objects of the specified type """
     (type, istemplate) = _parsetype(type)
     
+    print 'Getting list for ', type, istemplate
+    
     if type not in _typekeys:
         return jsonify({'success': False, 'errormessage': 'Unknown object type'}), 404
     key = _typekeys[type]
     if istemplate:
         key = 'name'
+    print 'Key is', key
     conf = _getconf()
     datakey = 'all_' + type
     if datakey in conf.data:
@@ -158,55 +161,25 @@ def service_details(objid, containers):
     - *objid* contains the service_description
     - *containers* contains the host and hostgroup, concatenated together. The hosts are prefixed with $ and hostgroups are prefixed with +
     """
+    # Containers mandatory
     if len(containers) == 0:
         abort(404)
     
-    # This function will 
-    def searchservice(conf):
-        ihost = -1
-        ihostgroup = -1
-        try:
-            ihost = containers.index('$')
-        except ValueError:
-            pass
-        try:
-            ihostgroup = containers.index('+')
-        except ValueError:
-            pass
-        
-        host = None
-        hostgroup = None
-        if ihost >= 0:
-            if ihostgroup >= 0:
-                if ihost > ihostgroup:
-                    hostgroup = containers[ihostgroup+1:ihost-1]
-                    host = containers[ihost+1:]
-                else:
-                    host = containers[ihost+1:ihostgroup-1]
-                    hostgroup = containers[ihostgroup+1:]
-                target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
-                                                                'host_name' in e and e['host_name'] == host and 
-                                                                'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
-
-            else:
-                host = containers[ihost+1:]
-                target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
-                                                                'host_name' in e and e['host_name'] == host), None)
-        else:
-            hostgroup = containers[ihostgroup+1:]
-            print 'Getting it with hostgroup ', hostgroup
-            target = next((e for e in conf.data['all_service'] if 'service_description' in e and e['service_description'] == objid and 
-                                                            'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
-        if not target:
-            abort(404)
-        return target
+    def searchservice(conf, istemplate):
+        return _searchservice(conf, istemplate, objid, containers)
     
     return _get_details('service', False, objid + '/' + containers, ServiceForm, searchservice)
 
-@app.route('/config/servicetemplate/<objid>', methods=['GET', 'POST'])
+@app.route('/config/servicetemplate/<objid>', methods=['GET', 'POST'], defaults={'containers': ''})
+@app.route('/config/servicetemplate/<objid>/<containers>', methods=['GET', 'POST'])
 @login_required
-def servicetemplate_details(objid):
-    return _get_details('service', True, objid, ServiceForm)
+def servicetemplate_details(objid, containers):
+    print 'Gimme the template'
+    # Containers may be empty for templates
+    def searchservice(conf, istemplate):
+        return _searchservice(conf, istemplate, objid, containers)
+    
+    return _get_details('service', True, objid + '/' + containers, ServiceForm, searchservice)
     
 def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
     conf = _getconf()
@@ -220,7 +193,7 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
             primkey = _typekeys[objtype]
         target = next((e for e in conf.data[typekey] if primkey in e and e[primkey] == objid), None)
     else:
-        target = targetfinder(conf)
+        target = targetfinder(conf, istemplate)
     if target is None:
         return 'NO TARGET', 404
         #abort(404)
@@ -241,13 +214,55 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
         _fillform(form, target)
     return render_template('config/details-{0}.html'.format(objtype), type=objtype, id=objid, data=_normalizestrings(target), form=form)
     
-@app.route('/config/canwrite')
-@login_required
-def config_can_edit():
-    confpath = paths.find_main_configuration_file()
-    result = os.access(confpath, os.W_OK)
-    return jsonify({'success': True, 'data':result})
+def _searchservice(conf, istemplate, objid, containers):
+    ihost = -1
+    ihostgroup = -1
+    try:
+        ihost = containers.index('$')
+    except ValueError:
+        pass
+    try:
+        ihostgroup = containers.index('+')
+    except ValueError:
+        pass
+    
+    service_key = 'service_description'
+    if istemplate:
+        service_key = 'name'
+    
+    host = None
+    hostgroup = None
+    if ihost >= 0:
+        if ihostgroup >= 0:
+            if ihost > ihostgroup:
+                hostgroup = containers[ihostgroup+1:ihost-1]
+                host = containers[ihost+1:]
+            else:
+                host = containers[ihost+1:ihostgroup-1]
+                hostgroup = containers[ihostgroup+1:]
+            target = next((e for e in conf.data['all_service'] if service_key in e and e[service_key] == objid and 
+                                                            'host_name' in e and e['host_name'] == host and 
+                                                            'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
 
+        else:
+            host = containers[ihost+1:]
+            target = next((e for e in conf.data['all_service'] if service_key in e and e[service_key] == objid and 
+                                                            'host_name' in e and e['host_name'] == host), None)
+    else:
+        if ihostgroup >= 0:
+            hostgroup = containers[ihostgroup+1:]
+            print 'Getting it with hostgroup ', hostgroup
+            target = next((e for e in conf.data['all_service'] if service_key in e and e[service_key] == objid and 
+                                                            'hostgroup_name' in e and e['hostgroup_name'] == hostgroup), None)
+        else:
+            print 'Getting a template', service_key, objid
+            target = next((e for e in conf.data['all_service'] if service_key in e and e[service_key] == objid), None)
+            print target
+    if target is None:
+        abort(404)
+    return target
+
+    
 # def check_config(confpath):
     # conf = Config()
     # buf = conf.read_config(confpath)

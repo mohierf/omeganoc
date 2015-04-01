@@ -154,11 +154,16 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
                            // If it's a service then the URL needs to contain several primary keys
                            var url = '';
                            if(row.meta.object_type == 'service') {
-                             url = '/config/service/' + row.service_description + '/';
+                             url = '/config/service' + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : row.service_description);
+                             
+                             var url_end = '';
                              if('host_name' in row && row.host_name)
-                                 url += '$' + row.host_name;
+                                 url_end += '$' + row.host_name;
                              if('hostgroup_name' in row && row.hostgroup_name)
-                                 url += '+' + row.hostgroup_name;
+                                 url_end += '+' + row.hostgroup_name;
+                             if(url_end)
+                                 url += '/' + url_end;
+                             
                              url = createurl(url);
                            }
                            else {
