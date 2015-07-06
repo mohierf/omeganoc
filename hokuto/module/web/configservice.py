@@ -269,6 +269,16 @@ def _searchservice(conf, istemplate, objid, containers):
 
 
 #services group
+@app.route('/config/servicegroup/<objectid>', methods=['GET', 'POST'])
+@login_required
+def servicegroup_details(objectid):
+    return _get_details('servicegroup', False, objectid, ServiceGroupForm)
+
+@app.route('/config/servicegrouptemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def servicegrouptemplate_details(objid):
+    return _get_details('servicegroup', True, objid, ServiceGroupForm)
+
 
 #contacts
 @app.route('/config/contact/<contactid>', methods=['GET', 'POST'])
@@ -691,7 +701,15 @@ class ServiceForm(Form):
     trigger_broker_raise_enabled = SelectField('Enable trigger', choices=_listboolean_choices())
     trigger_name = TextField('Trigger name')
 
-
+class ServiceGroupForm(Form):
+    #Description
+    servicegroup_name = TextField('ServiceGroup name')
+    alias = TextField('alias')
+    members = SelectMultipleField('Services', choices=_listobjects_choices('services', True))
+    servicegroup_members = SelectMultipleField('Services', choices=_listobjects_choices('servicegroup', True))
+    notes = TextField('Note string')
+    notes_url = URLField('Notes URL')
+    action_url = URLField('Action URL')
     
 class ContactForm(Form):
     #Description
