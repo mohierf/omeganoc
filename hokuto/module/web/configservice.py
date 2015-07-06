@@ -303,8 +303,27 @@ def contactgrouptemplate_details(objid):
     return _get_details('contactgroup', True, objid, ContactGroupForm)
 
 #time periods
+@app.route('/config/timeperiod/<objectid>', methods=['GET', 'POST'])
+@login_required
+def timeperiod_details(objectid):
+    return _get_details('timeperiod', False, objectid, TimeperiodForm)
+
+@app.route('/config/timeperiodtemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def timeperiodtemplate_details(objid):
+    return _get_details('timeperiod', True, objid, TimeperiodForm)
 
 #commands
+@app.route('/config/command/<objectid>', methods=['GET', 'POST'])
+@login_required
+def command_details(objectid):
+    return _get_details('command', False, objectid, CommandForm)
+
+@app.route('/config/commandtemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def commandtemplate_details(objid):
+    return _get_details('command', True, objid, CommandForm)
+
 
 # def check_config(confpath):
     # conf = Config()
@@ -738,4 +757,18 @@ class ContactGroupForm(Form):
     #Members
     members = SelectMultipleField('Members', choices=_listobjects_choices('contact', True))
     contactgroup_members = SelectMultipleField('Contact groups members', choices=_listobjects_choices('contactgroup', True))
- 
+
+class TimeperiodForm(Form):
+    #Description
+    timeperiod_name = TextField('Timeperiod name')
+    alias = TextField('Alias')
+    #TODO: special field for weekday and exception
+    #special selectors
+    weekday = TextField('monday')
+    exception = TextField('monday 3 - thursday 4 / 2')
+    exclude = SelectMultipleField('Excluded timeperiods', choices=_listobjects_choices('timeperiod', True))
+
+class CommandForm(Form):
+    #Description
+    command_name = TextField('Command name')
+    command_line = TextField('Command line')
