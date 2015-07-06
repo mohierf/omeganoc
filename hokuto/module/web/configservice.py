@@ -110,7 +110,7 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
     if not targetfinder:
         typekey = 'all_' + objtype
         if typekey not in conf.data:
-            abort(404) # No element of this type
+            return 'ELEMENT TYPE NOT FOUND',404 # No element of this type
         if istemplate:
             primkey = 'name'
         else:
@@ -275,6 +275,11 @@ def _searchservice(conf, istemplate, objid, containers):
 @login_required
 def contact_details(contactid):
     return _get_details('contact', False, contactid, ContactForm)
+
+@app.route('/config/contacttemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def contacttemplate_details(objid):
+    return _get_details('contact', True, objid, ContactForm)
 
 #contacts group
 
@@ -686,8 +691,8 @@ class ContactForm(Form):
     service_notification_enabled = SelectField('service_notification_enabled',choices=_listboolean_choices())
     host_notification_period = SelectField('Host notification period', choices=_listobjects_choices('timeperiod', True))
     service_notification_period = SelectField('Service notification period', choices=_listobjects_choices('timeperiod', True))
-    host_notification_options = SelectMultipleField('Service notification period', choices=[('d','d'),('u','u'),('r','r'),('f','f'),('s','s'),('n','n')])
-    service_notification_options = SelectMultipleField('Service notification period', choices=[('w','w'),('u','u'),('c','c'),('r','r'),('f','f'),('s','s'),('n','n')])
+    host_notification_options = SelectMultipleField('Service notification options', choices=[('d','d'),('u','u'),('r','r'),('f','f'),('s','s'),('n','n')])
+    service_notification_options = SelectMultipleField('Service notification options', choices=[('w','w'),('u','u'),('c','c'),('r','r'),('f','f'),('s','s'),('n','n')])
     host_notification_commands = TextField('Host notification command')
     server_notification_commands = TextField('Service notification command')
     email = TextField('Email')
