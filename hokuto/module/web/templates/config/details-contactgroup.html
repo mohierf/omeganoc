@@ -1,0 +1,71 @@
+{#
+ # This file is part of Omega Noc
+ # Copyright Omega Noc (C) 2015 Omega Cube and contributors
+ #
+ # This program is free software: you can redistribute it and/or modify
+ # it under the terms of the GNU Affero General Public License as
+ # published by the Free Software Foundation, either version 3 of the
+ # License, or (at your option) any later version.
+ #
+ # This program is distributed in the hope that it will be useful,
+ # but WITHOUT ANY WARRANTY; without even the implied warranty of
+ # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ # GNU Affero General Public License for more details.
+ #
+ # You should have received a copy of the GNU Affero General Public License
+ # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ #}
+{% extends "layout.html" %}
+
+{% macro _rf(field) %}
+<p>
+    {{ field.label }}
+    {{ field(**kwargs)|safe }}
+    {% if field.description %}<span class="field-description">{{ field.description }}</span>{% endif %}
+    {% if field.errors %}
+        {% for error in field.errors %}
+            <span class="error"> {{error}} </span>
+        {% endfor %}
+    {% endif %}
+</p>
+{% endmacro %}
+
+{% block head %}
+<link href="{{ url_for('static', filename='css/config.details.css') }}" rel="stylesheet" type="text/css" />
+<link href="{{ url_for('static', filename='css/select2.css') }}" rel="stylesheet" type="text/css" />
+{% endblock %}
+
+{% block content %}
+<div id="mainContent">
+  <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
+  <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
+
+  <form class="details-form" method="POST">
+    <fieldset>
+        <legend>Description</legend>
+        {{ _rf(form.contactgroup_name) }}
+        {{ _rf(form.alias) }}
+    </fieldset>
+
+    <fieldset>
+      <legend>Members</legend>
+      {{ _rf(form.members) }}
+      {{ _rf(form.contactgroup_members) }}
+    </fieldset>
+
+    <section>
+        <a href="{{ url_for('config_list') }}#{{ type }}" class="button">Back to list</a>
+        <a href="#" class="button">Verify</a>
+        <input type="submit" value="Save" />
+    </section>
+  </form>
+
+</div>
+
+<script type="text/javascript">
+    var _conf_details_data = {{ data | tojson | safe }};
+    var _conf_details_type = {{ type | tojson | safe }};
+    onoc_main_modules.push('config.details');
+</script>
+
+{% endblock %}

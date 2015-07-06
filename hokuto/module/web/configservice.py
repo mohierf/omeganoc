@@ -282,6 +282,15 @@ def contacttemplate_details(objid):
     return _get_details('contact', True, objid, ContactForm)
 
 #contacts group
+@app.route('/config/contactgroup/<objectid>', methods=['GET', 'POST'])
+@login_required
+def contactgroup_details(objectid):
+    return _get_details('contactgroup', False, objectid, ContactGroupForm)
+
+@app.route('/config/contactgrouptemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def contactgrouptemplate_details(objid):
+    return _get_details('contactgroup', True, objid, ContactGroupForm)
 
 #time periods
 
@@ -682,6 +691,8 @@ class ServiceForm(Form):
     trigger_broker_raise_enabled = SelectField('Enable trigger', choices=_listboolean_choices())
     trigger_name = TextField('Trigger name')
 
+
+    
 class ContactForm(Form):
     #Description
     contact_name = TextField('Host name')
@@ -701,3 +712,12 @@ class ContactForm(Form):
     can_submit_commands = SelectField('can_submit_commands',choices=_listboolean_choices())
     retain_status_information = SelectField('retain_status_information',choices=_listboolean_choices())
     retain_nonstatus_information = SelectField('retain_nonstatus_information',choices=_listboolean_choices())
+
+class ContactGroupForm(Form):
+    #Description
+    contactgroup_name = TextField('Host name')
+    alias = TextField(u'Alias')
+    #Members
+    members = SelectMultipleField('Members', choices=_listobjects_choices('contact', True))
+    contactgroup_members = SelectMultipleField('Contact groups members', choices=_listobjects_choices('contactgroup', True))
+ 
