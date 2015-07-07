@@ -37,6 +37,8 @@ from werkzeug.contrib.cache import SimpleCache
 
 from . import app, cache
 
+import re
+
 _typekeys = {
     'host': 'host_name',
     'service': 'service_description',
@@ -123,6 +125,7 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
         #abort(404)
 
 
+    _addtimeperiodsfield(formtype, target)
     form = formtype(request.form)
     _annotateform(form, target)
     if request.method == 'POST':
@@ -412,6 +415,12 @@ def _save_existing(conf, data, form, form_is_comprehensive):
     if did_change:
         print 'Commiting !! ' + data['meta']['filename']
         data['meta']['needs_commit'] = True
+
+        #apply descriptions as comments
+        for d in data['meta']['descriptions']:
+            if data[d]:
+                data[d] = data[d] + "\t; " + data['meta']['descriptions'][d]
+        
         conf.commit()
     return did_change
 
@@ -460,6 +469,35 @@ def _fillform(form, data):
             else:
                 field.process(None, v.decode('latin1'))
     return len(form.loaderrors) == 0
+
+#Add timeperiod exception fields to form and meta data
+def _addtimeperiodsfield(form,data):
+    ''' Add custom field (unsuported by pynag) '''
+    data['meta']['custom'] = []
+    data['meta']['descriptions'] = {}
+    reg = re.compile('(.+)\s+([\d\-:]+)\s*\;?(.*)')
+    tmp = {}
+    removeme = []
+    for d in data:
+        if d and not data[d]:
+            m = reg.match(d)
+            if(m):
+                r = m.groups()
+                field = r[0].strip()
+                dates = r[1]
+                meta = r[2]
+                data['meta']['defined_attributes'][field] = dates
+                removeme.append(d);
+                if field not in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']:
+                    setattr(form,field, TextField(field, description= meta))
+                    data['meta']['custom'].append(field)
+                    data['meta']['descriptions'][field] = meta
+                    tmp[field] = dates
+    for d in tmp:
+        data[d] = tmp[d]
+    for d in removeme:
+        del data[d]
+        del data['meta']['defined_attributes'][d]
 
 def _annotateform(form, data):
     typedata = getattr(shinken.objects, data['meta']['object_type'].title(), None)
@@ -762,11 +800,15 @@ class TimeperiodForm(Form):
     #Description
     timeperiod_name = TextField('Timeperiod name')
     alias = TextField('Alias')
-    #TODO: special field for weekday and exception
-    #special selectors
-    weekday = TextField('monday')
-    exception = TextField('monday 3 - thursday 4 / 2')
     exclude = SelectMultipleField('Excluded timeperiods', choices=_listobjects_choices('timeperiod', True))
+    #weekdays
+    sunday = TextField('Sunday', default= '00:00-00:00')
+    monday = TextField('Monday', default= '00:00-00:00')
+    tuesday = TextField('Tuesday', default= '00:00-00:00')
+    wednesday = TextField('Wednesday', default= '00:00-00:00')
+    thursday = TextField('Thursday', default= '00:00-00:00')
+    friday = TextField('Friday', default= '00:00-00:00')
+    saturday = TextField('Saturday', default= '00:00-00:00')
 
 class CommandForm(Form):
     #Description

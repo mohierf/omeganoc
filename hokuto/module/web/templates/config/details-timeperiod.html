@@ -40,6 +40,14 @@
   <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
   <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
 
+  <!-- REMOVEME!
+  <table>
+    {% for i in data %}
+    <tr><td style="color:green;">{{ i }}</td><td style="color:red;">{{ data[i] }}</td></tr>
+    {% endfor %}
+  </table>
+  -->
+  
   <form class="details-form" method="POST">
     <fieldset>
       <legend>Description</legend>
@@ -48,10 +56,24 @@
     </fieldset>
 
     <fieldset>
-      <legend>Selectors</legend>
-      {{ _rf(form.weekday) }}
-      {{ _rf(form.exception) }}
+      <legend>Weekdays</legend>
+      <p><small>leave blank to exclude a weekday from the timeperiod.</small></p>
+      {{_rf(form.sunday)}}
+      {{_rf(form.monday)}}
+      {{_rf(form.tuesday)}}
+      {{_rf(form.wednesday)}}
+      {{_rf(form.thursday)}}
+      {{_rf(form.friday)}}
+      {{_rf(form.saturday)}}
+    </fieldset>
+    
+    <fieldset>
+      <legend>Exceptions</legend>
       {{ _rf(form.exclude) }}
+      <p><small>Set a timerange of 00:00-00:00 or a blank value to exclude a date from the timeperiod.</small></p>
+      {% for f in data.meta.custom %}
+          {{_rf(form[f])}}
+      {% endfor %}
     </fieldset>
 
     <section>
