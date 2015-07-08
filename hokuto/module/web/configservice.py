@@ -772,7 +772,7 @@ class ContactForm(Form):
     #Description
     contact_name = TextField('Host name')
     alias = TextField(u'Alias')
-    contactgroups = TextField('Contact group')
+    contactgroups = SelectMultipleField('Contact group',choices= _listobjects_choices('contactgroup', True))
     host_notification_enabled = SelectField('host_notification_enabled',choices=_listboolean_choices())
     service_notification_enabled = SelectField('service_notification_enabled',choices=_listboolean_choices())
     host_notification_period = SelectField('Host notification period', choices=_listobjects_choices('timeperiod', True))
