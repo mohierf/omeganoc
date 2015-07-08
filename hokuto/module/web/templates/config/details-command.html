@@ -45,6 +45,7 @@
       <legend>Description</legend>
       {{ _rf(form.command_name) }}
       {{ _rf(form.command_line) }}
+      {{ _rf(form.poller_tag) }}
     </fieldset>
     <section>
         <a href="{{ url_for('config_list') }}#{{ type }}" class="button">Back to list</a>
