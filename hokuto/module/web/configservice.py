@@ -140,7 +140,7 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
         # Fill the form with the data from the configuration file
         _fillform(form, target)
     return render_template('config/details-{0}.html'.format(objtype), type=objtype, id=objid, data=_normalizestrings(target), form=form)
-    
+
 @app.route('/config/list/<type>')
 @login_required
 def conf_getdatalist(type):
@@ -420,7 +420,7 @@ def _save_existing(conf, data, form, form_is_comprehensive):
         for d in data['meta']['descriptions']:
             if data[d]:
                 data[d] = data[d] + "\t; " + data['meta']['descriptions'][d]
-        
+
         conf.commit()
     return did_change
 
@@ -438,7 +438,8 @@ def _fillform(form, data):
             if typedata and k in typedata.properties and isinstance(typedata.properties[k], BoolProp):
                 # It is; normalize all different boolean syntaxes so it's only '0' or '1'
                 try:
-                    v = 'on' if BoolProp.pythonize(v) else 'off'
+                    v = 1 if BoolProp.pythonize(v) else 0
+                    field.process(None, v)
                 except PythonizeError:
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an invalid boolean value ({0}), and has been cleared.'.format(v)
@@ -460,14 +461,15 @@ def _fillform(form, data):
                 # Check that the current value is available
                 # If not we'll consider it to be a configuration error
                 for name, val in field.choices:
-                    if name == v:
+                    if str(val) == str(v):
                         break
                 else:
                     # Current value not available
                     form.loaderrors.append('{0} ({1})'.format(field.label.text, k))
                     field.loaderror = 'This field contained an element that does not exist ({0}), and it has been cleared.'.format(v)
+                field.process(None, v)
             else:
-                field.process(None, v.decode('latin1'))
+                field.process(None, v)
     return len(form.loaderrors) == 0
 
 #Add timeperiod exception fields to form and meta data
@@ -581,7 +583,7 @@ def _listobjects_choices(type, addempty = False, key = None):
     return data
 
 def _listboolean_choices():
-    return [('', '<unspecified>'), ('on', 'Yes'), ('off', 'No')]
+    return [('', '<unspecified>'), (1, 'Yes'), (0, 'No')]
 
 # #########################################################################################################
 # Forms
@@ -767,7 +769,7 @@ class ServiceGroupForm(Form):
     notes = TextField('Note string',description='This directive is used to define an optional string of notes pertaining to the service group.')
     notes_url = URLField('Notes URL',description='This directive is used to define an optional URL that can be used to provide more information about the service group.')
     action_url = URLField('Action URL',description='This directive is used to define an optional URL that can be used to provide more actions to be performed on the service group.')
-    
+
 class ContactForm(Form):
     #Description
     contact_name = TextField('Host name',description='This directive is used to define a short name used to identify the contact. It is referenced in contact group definitions.')
@@ -777,7 +779,7 @@ class ContactForm(Form):
     service_notification_enabled = SelectField('service_notification_enabled',choices=_listboolean_choices(),description='This directive is used to determine whether or not the contact will receive notifications about service problems and recoveries.')
     host_notification_period = SelectField('Host notification period', choices=_listobjects_choices('timeperiod', True),description='This directive is used to specify the short name of the time period during which the contact can be notified about host problems or recoveries.')
     service_notification_period = SelectField('Service notification period', choices=_listobjects_choices('timeperiod', True),description='This directive is used to specify the short name of the time period during which the contact can be notified about service problems or recoveries.')
-    host_notification_options = SelectMultipleField('Service notification options', choices=[('d','d'),('u','u'),('r','r'),('f','f'),('s','s'),('n','n')],description='This directive is used to define the host states for which notifications can be sent out to this contact.')
+    host_notification_options = SelectMultipleField('Host notification options', choices=[('d','d'),('u','u'),('r','r'),('f','f'),('s','s'),('n','n')],description='This directive is used to define the host states for which notifications can be sent out to this contact.')
     service_notification_options = SelectMultipleField('Service notification options', choices=[('w','w'),('u','u'),('c','c'),('r','r'),('f','f'),('s','s'),('n','n')],description='This directive is used to define the service states for which notifications can be sent out to this contact.')
     host_notification_commands = TextField('Host notification command',description='This directive is used to define a list of the short names of the commands used to notify the contact of a host problem or recovery. Multiple notification commands should be separated by commas. All notification commands are executed when the contact needs to be notified.')
     server_notification_commands = TextField('Service notification command',description='This directive is used to define a list of the short names of the commands used to notify the contact of a service problem or recovery. Multiple notification commands should be separated by commas.')
