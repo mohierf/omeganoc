@@ -379,6 +379,8 @@ def _save_existing(conf, data, form, form_is_comprehensive):
     # Turn arrays into strings ['a','b','c'] => 'a,b,c'
     for k, v in fdata.iteritems():
         if isinstance(v, list):
+            #trololololo, more seriously, this is to prevent empty values in list
+            v = [v for v in v if v]
             fdata[k] = ','.join(v)
 
     attr = data['meta']['defined_attributes']
