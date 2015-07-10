@@ -40,15 +40,6 @@
   <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
   <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
 
-  <table>
-    {% for d in data %}
-    <tr>
-      <td style="color:green">{{ d }}</td>
-      <td style="color:red">{{ data[d] }}</td>
-    </tr>
-    {% endfor%}
-  </table>
-  
   <form class="details-form" method="POST">
     <fieldset>
         <legend>Description</legend>
