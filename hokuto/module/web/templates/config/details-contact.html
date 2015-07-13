@@ -37,10 +37,20 @@
 
 {% block content %}
 <div id="mainContent">
+  {% if data %}
   <h3 class="title"> Configuring {{ type }} "{{ id }}" </h3>
   <p class="intro">Defined in file {{ data['meta']['filename'] }} at line {{ data['meta']['line_start'] }}.</p>
-
+  {% else %}
+  <h3 class="title"> Add new {{ type }} configuration file</h3>
+  {% endif %}
+  
   <form class="details-form" method="POST">
+    {% if not data %}
+    <fieldset>
+      <legend>New file description</legend>
+      {{ _rf(form.filename) }}
+    </fieldset>
+    {% endif %}
     <fieldset>
         <legend>Description</legend>
         {{ _rf(form.contact_name) }}

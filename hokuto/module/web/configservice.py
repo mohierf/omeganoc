@@ -22,8 +22,9 @@
 import os
 
 from pynag.Parsers import config
+import pynag.Model
 
-from flask import jsonify, render_template, abort, request
+from flask import jsonify, render_template, abort, request, redirect
 from flask.ext.login import login_required
 from wtforms import Form, TextField, SelectField, SelectMultipleField, TextAreaField, SelectFieldBase, validators
 from wtforms.fields.html5 import IntegerField, URLField
@@ -108,7 +109,26 @@ def _normalizestrings(data):
         return data
 
 def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
-    conf = _getconf()
+    #if no objid given we are creating a new configuration file
+    if objid is None:
+        setattr(formtype,'filename',TextField('Configuration file name'))
+        form = formtype(request.form)
+        #_annotateform(form, target)
+        if request.method == 'POST':
+            print 'iz POST!'
+            if form.validate():
+                # Save !
+                _save_new(form, objtype)
+                #TODO: redirect to list
+                return redirect('/config#'+objtype)
+            else:
+                print 'iz not valid :('
+                #_fillform(form,)
+                return render_template('config/details-{0}.html'.format(objtype), type=objtype, form=form, data={})
+
+        else: #GET
+            return render_template('config/details-{0}.html'.format(objtype), type=objtype, form=form, data={})
+
     if not targetfinder:
         typekey = 'all_' + objtype
         if typekey not in conf.data:
@@ -140,86 +160,6 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
         # Fill the form with the data from the configuration file
         _fillform(form, target)
     return render_template('config/details-{0}.html'.format(objtype), type=objtype, id=objid, data=_normalizestrings(target), form=form)
-
-@app.route('/config/list/<type>')
-@login_required
-def conf_getdatalist(type):
-    """ Returns a JSON object containing all the data for objects of the specified type """
-    (type, istemplate) = _parsetype(type)
-
-    print 'Getting list for ', type, istemplate
-
-    if type not in _typekeys:
-        return jsonify({'success': False, 'errormessage': 'Unknown object type'}), 404
-    key = _typekeys[type]
-    if istemplate:
-        key = 'name'
-    print 'Key is', key
-    conf = _getconf()
-    datakey = 'all_' + type
-    if datakey in conf.data:
-        data = _normalizestrings([i for i in conf['all_' + type] if key in i])
-    else:
-        # If the key does not exist, it's usually because no elements of that type were found in the config files
-        data = []
-    return jsonify({'success': True, 'data': data})
-
-
-@app.route('/config')
-@login_required
-def config_list():
-    return render_template('config/list.html')
-
-#hosts
-@app.route('/config/host/<objid>', methods=['GET', 'POST'])
-@login_required
-def host_details(objid):
-    return _get_details('host', False, objid, HostForm)
-
-@app.route('/config/hosttemplate/<objid>', methods=['GET', 'POST'])
-@login_required
-def hosttemplate_details(objid):
-    return _get_details('host', True, objid, HostForm)
-
-#hostgroup
-@app.route('/config/hostgroup/<objid>', methods=['GET', 'POST'])
-@login_required
-def hostgroup_details(objid):
-    return _get_details('hostgroup', False, objid, HostGroupForm)
-
-@app.route('/config/hostgrouptemplate/<objid>', methods=['GET', 'POST'])
-@login_required
-def hostgrouptemplate_details(objid):
-    return _get_details('hostgroup', True, objid, HostGroupForm)
-
-#services
-@app.route('/config/service/<objid>/<containers>', methods=['GET', 'POST'])
-@login_required
-def service_details(objid, containers):
-    """
-    Shows the details page for a service. The service to show is specified with *objid* and *containers*:
-    - *objid* contains the service_description
-    - *containers* contains the host and hostgroup, concatenated together. The hosts are prefixed with $ and hostgroups are prefixed with +
-    """
-    # Containers mandatory
-    if len(containers) == 0:
-        abort(404)
-
-    def searchservice(conf, istemplate):
-        return _searchservice(conf, istemplate, objid, containers)
-
-    return _get_details('service', False, objid + '/' + containers, ServiceForm, searchservice)
-
-@app.route('/config/servicetemplate/<objid>', methods=['GET', 'POST'], defaults={'containers': ''})
-@app.route('/config/servicetemplate/<objid>/<containers>', methods=['GET', 'POST'])
-@login_required
-def servicetemplate_details(objid, containers):
-    print 'Gimme the template'
-    # Containers may be empty for templates
-    def searchservice(conf, istemplate):
-        return _searchservice(conf, istemplate, objid, containers)
-
-    return _get_details('service', True, objid + '/' + containers, ServiceForm, searchservice)
 
 def _searchservice(conf, istemplate, objid, containers):
     ihost = -1
@@ -269,9 +209,107 @@ def _searchservice(conf, istemplate, objid, containers):
         abort(404)
     return target
 
+@app.route('/config/list/<type>')
+@login_required
+def conf_getdatalist(type):
+    """ Returns a JSON object containing all the data for objects of the specified type """
+    (type, istemplate) = _parsetype(type)
 
+    print 'Getting list for ', type, istemplate
+
+    if type not in _typekeys:
+        return jsonify({'success': False, 'errormessage': 'Unknown object type'}), 404
+    key = _typekeys[type]
+    if istemplate:
+        key = 'name'
+    print 'Key is', key
+    conf = _getconf()
+    datakey = 'all_' + type
+    if datakey in conf.data:
+        data = _normalizestrings([i for i in conf['all_' + type] if key in i])
+    else:
+        # If the key does not exist, it's usually because no elements of that type were found in the config files
+        data = []
+    return jsonify({'success': True, 'data': data})
+
+
+@app.route('/config')
+@login_required
+def config_list():
+    return render_template('config/list.html')
+
+#hosts
+@app.route('/config/host/create', methods=['GET', 'POST'])
+@login_required
+def host_create():
+    return _get_details('host', False, None, HostForm)
+
+@app.route('/config/host/<objid>', methods=['GET', 'POST'])
+@login_required
+def host_details(objid):
+    return _get_details('host', False, objid, HostForm)
+
+@app.route('/config/hosttemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def hosttemplate_details(objid):
+    return _get_details('host', True, objid, HostForm)
+
+#hostgroup
+@app.route('/config/hostgroup/create', methods=['GET', 'POST'])
+@login_required
+def hostgroup_create():
+    return _get_details('hostgroup', False, None, HostGroupForm)
+
+@app.route('/config/hostgroup/<objid>', methods=['GET', 'POST'])
+@login_required
+def hostgroup_details(objid):
+    return _get_details('hostgroup', False, objid, HostGroupForm)
+
+@app.route('/config/hostgrouptemplate/<objid>', methods=['GET', 'POST'])
+@login_required
+def hostgrouptemplate_details(objid):
+    return _get_details('hostgroup', True, objid, HostGroupForm)
+
+#services
+@app.route('/config/service/create', methods=['GET', 'POST'])
+@login_required
+def service_create():
+    return _get_details('service', False, None, ServiceForm)
+
+@app.route('/config/service/<objid>/<containers>', methods=['GET', 'POST'])
+@login_required
+def service_details(objid, containers):
+    """
+    Shows the details page for a service. The service to show is specified with *objid* and *containers*:
+    - *objid* contains the service_description
+    - *containers* contains the host and hostgroup, concatenated together. The hosts are prefixed with $ and hostgroups are prefixed with +
+    """
+    # Containers mandatory
+    if len(containers) == 0:
+        abort(404)
+
+    def searchservice(conf, istemplate):
+        return _searchservice(conf, istemplate, objid, containers)
+
+    return _get_details('service', False, objid + '/' + containers, ServiceForm, searchservice)
+
+@app.route('/config/servicetemplate/<objid>', methods=['GET', 'POST'], defaults={'containers': ''})
+@app.route('/config/servicetemplate/<objid>/<containers>', methods=['GET', 'POST'])
+@login_required
+def servicetemplate_details(objid, containers):
+    print 'Gimme the template'
+    # Containers may be empty for templates
+    def searchservice(conf, istemplate):
+        return _searchservice(conf, istemplate, objid, containers)
+
+    return _get_details('service', True, objid + '/' + containers, ServiceForm, searchservice)
 
 #services group
+@app.route('/config/servicegroup/create', methods=['GET', 'POST'])
+@login_required
+def servicegroup_create():
+    return _get_details('servicegroup', False, None, ServiceGroupForm)
+
 @app.route('/config/servicegroup/<objectid>', methods=['GET', 'POST'])
 @login_required
 def servicegroup_details(objectid):
@@ -284,6 +322,11 @@ def servicegrouptemplate_details(objid):
 
 
 #contacts
+@app.route('/config/contact/create', methods=['GET', 'POST'])
+@login_required
+def contact_create():
+    return _get_details('contact', False, None, ContactForm)
+
 @app.route('/config/contact/<contactid>', methods=['GET', 'POST'])
 @login_required
 def contact_details(contactid):
@@ -295,6 +338,11 @@ def contacttemplate_details(objid):
     return _get_details('contact', True, objid, ContactForm)
 
 #contacts group
+@app.route('/config/contactgroup/create', methods=['GET', 'POST'])
+@login_required
+def contactgroup_create():
+    return _get_details('contactgroup', False, None, ContactGroupForm)
+
 @app.route('/config/contactgroup/<objectid>', methods=['GET', 'POST'])
 @login_required
 def contactgroup_details(objectid):
@@ -306,6 +354,11 @@ def contactgrouptemplate_details(objid):
     return _get_details('contactgroup', True, objid, ContactGroupForm)
 
 #time periods
+@app.route('/config/timeperiod/create', methods=['GET', 'POST'])
+@login_required
+def timeperiod_create():
+    return _get_details('timeperiod', False, None, TimeperiodForm)
+
 @app.route('/config/timeperiod/<objectid>', methods=['GET', 'POST'])
 @login_required
 def timeperiod_details(objectid):
@@ -317,6 +370,11 @@ def timeperiodtemplate_details(objid):
     return _get_details('timeperiod', True, objid, TimeperiodForm)
 
 #commands
+@app.route('/config/command/create', methods=['GET', 'POST'])
+@login_required
+def command_create():
+    return _get_details('command', False, None, CommandForm)
+
 @app.route('/config/command/<objectid>', methods=['GET', 'POST'])
 @login_required
 def command_details(objectid):
@@ -360,6 +418,32 @@ def commandtemplate_details(objid):
     # if not conf.conf_is_correct:
         # return False
     # return True
+
+
+def _save_new(form,targettype):
+    """ """
+    # Extract filled fields from the form
+    fdata = {k.name:k.data for k in form}
+    filename = fdata['filename'];
+
+    targettype = targettype.capitalize()
+    conftype = getattr(pynag.Model,targettype)
+    new_conf = conftype()
+
+    # Turn arrays into strings ['a','b','c'] => 'a,b,c'
+    for k, v in fdata.iteritems():
+        if k == 'filename':
+            next
+        if isinstance(v, list):
+            v = [v for v in v if v]
+            fdata[k] = ','.join(v)
+
+        setattr(new_conf,k,v)
+
+    app.logger.error('Commiting !! ' + filename)
+    new_conf.set_filename(filename)
+    new_conf.save()
+    return True
 
 def _save_existing(conf, data, form, form_is_comprehensive):
     """
