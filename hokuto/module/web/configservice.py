@@ -119,7 +119,6 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
             if form.validate():
                 # Save !
                 _save_new(form, objtype)
-                #TODO: redirect to list
                 return redirect('/config#'+objtype)
             else:
                 print 'iz not valid :('
@@ -243,13 +242,25 @@ def config_list():
 @app.route('/config/delete/<typeid>/<objid>',methods=['GET','POST'])
 def delete_conf(typeid,objid):
     conf = _getconf()
-    #TODO: handle templates
-    primkey = _typekeys[typeid]
+    is_template = False
+    
+    if typeid.endswith('template'):
+        is_template = True
+        typeid = typeid[:-8]
+
+    if is_template:
+        primkey = 'name'
+    else:
+        primkey = _typekeys[typeid]
+
     targettype = getattr(pynag.Model,typeid.capitalize())
     args = {}
     args[primkey] = objid
     for target in targettype.objects.filter(**args):
         target.delete()
+
+    if is_template:
+        typeid = typeid + 'template'
     return redirect('/config#'+typeid)
 
 #hosts
