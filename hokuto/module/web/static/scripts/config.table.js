@@ -186,7 +186,7 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
             'title': 'Remove',
             'data': targetStruct.key,
             'render': function(data, type, row, meta) {
-                var url = createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data) + '/delete');
+                var url = createurl('/config/delete/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data));
                 return '<a href="' + url + '" class="button">Delete</a>';
             },
             'orderable': false,

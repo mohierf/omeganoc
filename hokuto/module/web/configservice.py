@@ -129,6 +129,7 @@ def _get_details(objtype, istemplate, objid, formtype, targetfinder = None):
         else: #GET
             return render_template('config/details-{0}.html'.format(objtype), type=objtype, form=form, data={})
 
+    conf = _getconf()
     if not targetfinder:
         typekey = 'all_' + objtype
         if typekey not in conf.data:
@@ -233,10 +234,23 @@ def conf_getdatalist(type):
     return jsonify({'success': True, 'data': data})
 
 
+#lists & delete
 @app.route('/config')
 @login_required
 def config_list():
     return render_template('config/list.html')
+
+@app.route('/config/delete/<typeid>/<objid>',methods=['GET','POST'])
+def delete_conf(typeid,objid):
+    conf = _getconf()
+    #TODO: handle templates
+    primkey = _typekeys[typeid]
+    targettype = getattr(pynag.Model,typeid.capitalize())
+    args = {}
+    args[primkey] = objid
+    for target in targettype.objects.filter(**args):
+        target.delete()
+    return redirect('/config#'+typeid)
 
 #hosts
 @app.route('/config/host/create', methods=['GET', 'POST'])
