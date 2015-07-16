@@ -161,6 +161,7 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
             'render': function(data, type, row, meta) {
                 // If it's a service then the URL needs to contain several primary keys
                 var url = '';
+                var urladv = '';
                 if(row.meta.object_type == 'service') {
                     url = '/config/service' + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : row.service_description);
 
@@ -176,7 +177,9 @@ define(['jquery', 'config.data', 'onoc.createurl', 'console', 'datatables', 'jqu
                 } else {
                     url = createurl('/config/' + typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data));
                 }
-                return '<a href="' + url + '" class="button">Edit</a>';
+                urladv = '/config/expert/'+ typeName + (isTemplate ? 'template/' : '/') + (isTemplate ? row.name : data);
+                urladv = createurl(urladv);
+                return '<a href="' + url + '" class="button">Edit</a><a href="'+urladv+'" class="button">Advanced</a>';
             },
             'orderable': false,
             'searchable': false

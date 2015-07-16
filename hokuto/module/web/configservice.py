@@ -209,6 +209,7 @@ def _searchservice(conf, istemplate, objid, containers):
         abort(404)
     return target
 
+#lists, expert & delete
 @app.route('/config/list/<type>')
 @login_required
 def conf_getdatalist(type):
@@ -232,18 +233,17 @@ def conf_getdatalist(type):
         data = []
     return jsonify({'success': True, 'data': data})
 
-
-#lists & delete
 @app.route('/config')
 @login_required
 def config_list():
     return render_template('config/list.html')
 
 @app.route('/config/delete/<typeid>/<objid>',methods=['GET','POST'])
+@login_required
 def delete_conf(typeid,objid):
-    conf = _getconf()
+    """ Delete a configuration file """
     is_template = False
-    
+
     if typeid.endswith('template'):
         is_template = True
         typeid = typeid[:-8]
@@ -263,6 +263,50 @@ def delete_conf(typeid,objid):
         typeid = typeid + 'template'
     return redirect('/config#'+typeid)
 
+@app.route('/config/expert/<typeid>/<objid>', methods=['GET','POST'])
+@login_required
+def expert_mode(typeid,objid):
+    """ Edit a file in expert mode """
+    is_template = False
+    if typeid.endswith('template'):
+        is_template = True
+        typeid = typeid[:-8]
+
+    if is_template:
+        primkey = 'name'
+    else:
+        primkey = _typekeys[typeid]
+    
+    targettype = getattr(pynag.Model,typeid.capitalize())
+    args = {}
+    args[primkey] = objid
+    for target in targettype.objects.filter(**args):
+        filename = target.get_filename()
+
+    form = ExpertForm(request.form)
+    
+    #if post let's saving
+    if request.method == 'POST':
+        f = open(filename,'w')
+        fdata = {k.name:k.data for k in form}
+        f.write(fdata['field'])
+        if is_template:
+            typeid = typeid + 'template'
+        return redirect('/config#'+ typeid)
+        
+    #else display edit form
+    f = open(filename,'r')
+    getattr(form,'field').process(None,f.read())
+
+    return render_template(
+        'config/details-expert.html',
+        filename=filename,
+        form=form,
+        type=typeid,
+        id=objid,
+        is_template=is_template
+    )
+    
 #hosts
 @app.route('/config/host/create', methods=['GET', 'POST'])
 @login_required
@@ -1527,3 +1571,6 @@ class CommandForm(Form):
         'Poller tag',
         description='This directive is used to define the poller_tag of this command. If the host/service that call this command do not override it with their own poller_tag, it will make this command if used in a check only taken by polelrs that also have this value in their poller_tags parameter. By default there is no poller_tag, so all untagged pollers can take it.'
     ) # TODO : Show a list of existing tags + 'None' ?
+
+class ExpertForm(Form):
+    field = TextAreaField(u'Content')

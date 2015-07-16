@@ -54,6 +54,11 @@ form > fieldset input, form > fieldset select, form > fieldset .select2-containe
     width: 400px;
 }
 
+form > fieldset textarea{
+    width: 100%;
+    height: 400px;
+}
+
 /* For some reason number fields are 12px larger */
 form > fieldset input[type="number"] {
     width: 60px;
